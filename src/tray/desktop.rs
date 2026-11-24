@@ -56,6 +56,7 @@ pub struct Placement {
     width: i32,
     height: i32,
     dpi: u32,
+    work_bottom: i32,
 }
 
 pub enum PlacementTarget {
@@ -141,6 +142,7 @@ fn place(
         width,
         height,
         dpi,
+        work_bottom: work.bottom,
     }
 }
 

@@ -81,4 +81,4 @@ internal sealed record Settings(Source[] Sources, int Retention, int Minutes, st
 internal sealed record DeviceChoice(string Label, string? Endpoint, bool Selected);
 internal sealed record Preferences(Settings Settings, DeviceChoice[][] Devices, string? Issue);
 internal sealed record SaveLength(int Minutes, string Label, bool IsDefault);
-internal sealed record Placement(int X, int Y, int Width, int Height, int Dpi);
+internal sealed record Placement(int X, int Y, int Width, int Height, int Dpi, int WorkBottom);
