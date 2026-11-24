@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: windows-2025-vs2026
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RUSTUP_TOOLCHAIN: stable
+      # Avoid MSBuild file tracking path limits while CMake builds Opus.
+      TrackFileAccess: 'false'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        id: dotnet
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Select build toolchains
+        env:
+          SDK_VERSION: ${{ steps.dotnet.outputs.dotnet-version }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          dotnet new globaljson --sdk-version $env:SDK_VERSION
+          rustup toolchain install stable --profile minimal --target aarch64-pc-windows-msvc
+
+      - name: Test audio engine
+        run: cargo test --locked --target x86_64-pc-windows-msvc
+
+      - name: Build portable ZIPs
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $dist = Join-Path $env:RUNNER_TEMP 'hearlier-release'
+          $cargo = cargo metadata --locked --format-version 1 --filter-platform x86_64-pc-windows-msvc | ConvertFrom-Json
+
+          function Copy-Notices($source, $destination) {
+              $files = Get-ChildItem -LiteralPath $source -File |
+                  Where-Object Name -Match '^(license|copying|notice|third[-_ ]party)'
+              if ($files) {
+                  New-Item -ItemType Directory -Path $destination -Force | Out-Null
+                  $files | Copy-Item -Destination $destination
+              }
+          }
+
+          foreach ($runtime in 'win-x64', 'win-arm64') {
+              $name = "hearlier-$env:GITHUB_REF_NAME-$runtime"
+              $output = Join-Path $dist $name
+              # The WinUI build output includes the app's PRI and XBF resources.
+              dotnet build ui/Hearlier.csproj -c Release -r $runtime --self-contained `
+                  -p:RestoreLockedMode=true "-p:Version=$version" -p:DebugType=none -o "$output/"
+              foreach ($file in 'hearlier.exe', 'hearlier.ico', 'hearlier_core.dll', 'hearlier.pri') {
+                  if (!(Test-Path -LiteralPath (Join-Path $output $file) -PathType Leaf)) {
+                      throw "Missing $file in $runtime build"
+                  }
+              }
+
+              $notices = Join-Path $output 'licenses'
+              foreach ($package in $cargo.packages | Where-Object source) {
+                  $source = Split-Path -Parent $package.manifest_path
+                  $destination = Join-Path $notices "$($package.name)-$($package.version)"
+                  Copy-Notices $source $destination
+                  if ($package.name -eq 'opusic-sys') {
+                      Copy-Notices (Join-Path $source 'opus') (Join-Path $notices 'libopus')
+                  }
+              }
+
+              $assets = Get-Content -Raw ui/obj/project.assets.json | ConvertFrom-Json -AsHashtable
+              $packages = @($assets.libraries.Values.path)
+              foreach ($dependency in $assets.project.frameworks.Values.downloadDependencies) {
+                  if ($dependency.name -eq "Microsoft.NETCore.App.Runtime.$runtime") {
+                      $runtimeVersion = ($dependency.version -split '[\[,\] ]+' | Where-Object { $_ })[0]
+                      $packages += "$($dependency.name.ToLowerInvariant())/$runtimeVersion"
+                  }
+              }
+              foreach ($folder in $assets.packageFolders.Keys) {
+                  foreach ($package in $packages) {
+                      $source = Join-Path $folder $package
+                      if (Test-Path -LiteralPath $source -PathType Container) {
+                          Copy-Notices $source (Join-Path $notices ($package.Replace('/', '-')))
+                      }
+                  }
+              }
+
+              Compress-Archive -LiteralPath $output -DestinationPath "$output.zip"
+          }
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $dist = Join-Path $env:RUNNER_TEMP 'hearlier-release'
+          $x64 = Join-Path $dist "hearlier-$env:GITHUB_REF_NAME-win-x64.zip"
+          $arm64 = Join-Path $dist "hearlier-$env:GITHUB_REF_NAME-win-arm64.zip"
+          gh release create $env:GITHUB_REF_NAME $x64 $arm64 --verify-tag --generate-notes

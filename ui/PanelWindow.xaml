@@ -1,0 +1,149 @@
+<Window
+    x:Class="Hearlier.PanelWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="hearlier">
+    <Window.SystemBackdrop>
+        <DesktopAcrylicBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root" Background="Transparent" RowDefinitions="*,Auto">
+        <Grid x:Name="SettingsPanel" RowDefinitions="Auto,*,Auto" Visibility="Collapsed"
+              CornerRadius="{ThemeResource OverlayCornerRadius}" BorderThickness="1"
+              BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}">
+            <Grid.Resources>
+                <Style x:Key="SettingsSectionCardStyle" TargetType="Border">
+                    <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                    <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}" />
+                    <Setter Property="Padding" Value="10,6" />
+                </Style>
+            </Grid.Resources>
+            <TextBlock x:Name="SettingsTitle" Margin="16,14,16,10" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Padding="16,0,16,12" Spacing="8">
+                    <TextBlock x:Name="SetupDescription" TextWrapping="Wrap"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="Recent audio stays on this PC in a temporary buffer. Saved clips stay in your recordings folder." />
+                    <TextBlock Text="Capture" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,4,0,0" />
+                    <Border Style="{StaticResource SettingsSectionCardStyle}">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="126,*" ColumnSpacing="8">
+                                <CheckBox x:Name="SystemEnabled" Content="System audio" />
+                                <ComboBox x:Name="SystemDevice" Grid.Column="1" HorizontalAlignment="Stretch"
+                                          AutomationProperties.Name="Output to monitor" />
+                            </Grid>
+                            <Grid ColumnDefinitions="126,*" ColumnSpacing="8">
+                                <CheckBox x:Name="MicEnabled" Content="Microphone" />
+                                <ComboBox x:Name="MicDevice" Grid.Column="1" HorizontalAlignment="Stretch"
+                                          AutomationProperties.Name="Microphone input" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="History &amp; storage" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,4,0,0" />
+                    <Border Style="{StaticResource SettingsSectionCardStyle}">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="126,*" ColumnSpacing="8">
+                                <TextBlock Text="Keep history (min)" VerticalAlignment="Center" />
+                                <NumberBox x:Name="Retention" Grid.Column="1" Minimum="1" Maximum="720" SmallChange="1"
+                                           SpinButtonPlacementMode="Compact" AutomationProperties.Name="Keep history in minutes" />
+                            </Grid>
+                            <Grid x:Name="FormatRow" ColumnDefinitions="126,*" ColumnSpacing="8">
+                                <TextBlock Text="Export format" VerticalAlignment="Center" />
+                                <ComboBox x:Name="Format" Grid.Column="1" HorizontalAlignment="Stretch" AutomationProperties.Name="Export format">
+                                    <ComboBoxItem Content="Matroska (.mka)" />
+                                    <ComboBoxItem Content="Ogg Opus (.opus)" />
+                                </ComboBox>
+                            </Grid>
+                            <Grid x:Name="FolderRow" ColumnDefinitions="126,*,Auto" ColumnSpacing="8">
+                                <TextBlock Text="Save clips to" VerticalAlignment="Center" />
+                                <TextBox x:Name="Folder" Grid.Column="1" AutomationProperties.Name="Recordings folder" />
+                                <Button Grid.Column="2" Content="Browse…" Click="Browse" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="Shortcuts" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,4,0,0" />
+                    <Border Style="{StaticResource SettingsSectionCardStyle}">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="126,*" ColumnSpacing="8">
+                                <TextBlock Text="Default save (min)" VerticalAlignment="Center" />
+                                <NumberBox x:Name="Minutes" Grid.Column="1" Minimum="1" Maximum="720" SmallChange="1"
+                                           SpinButtonPlacementMode="Compact" AutomationProperties.Name="Default save length in minutes" />
+                            </Grid>
+                            <Grid ColumnDefinitions="126,*" ColumnSpacing="8">
+                                <TextBlock Text="Global hotkey" VerticalAlignment="Center" />
+                                <TextBox x:Name="Hotkey" Grid.Column="1" PlaceholderText="Off" AutomationProperties.Name="Global hotkey" />
+                            </Grid>
+                            <TextBlock Text="Example: Ctrl+Alt+F9. Leave blank to disable."
+                                       Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel x:Name="General" Spacing="8" Margin="0,4,0,0">
+                        <TextBlock Text="General" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <Border Style="{StaticResource SettingsSectionCardStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <CheckBox x:Name="Autostart" Content="Start with Windows" />
+                                <CheckBox x:Name="Notifications" Content="Notifications" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+            <StackPanel Grid.Row="2" Margin="16,0,16,14" Spacing="8">
+                <InfoBar x:Name="SettingsNotice" IsClosable="False" Severity="Warning" />
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <Button x:Name="QuitButton" Content="Quit hearlier" Click="Quit" />
+                    <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Click="Cancel" />
+                    <Button x:Name="ApplyButton" Grid.Column="2" Content="Apply" Click="Apply" Style="{StaticResource AccentButtonStyle}" />
+                </Grid>
+            </StackPanel>
+            <Border Grid.Row="2" Height="1" VerticalAlignment="Bottom" IsHitTestVisible="False"
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+        </Grid>
+
+        <Border x:Name="QuickPanel" Grid.Row="1" Padding="12,8">
+            <Border.Resources>
+                <x:Double x:Key="QuickActionHeight">32</x:Double>
+            </Border.Resources>
+            <Grid RowDefinitions="Auto,Auto">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                    <SplitButton x:Name="SaveButton" Content="Save" Click="Save" Height="{StaticResource QuickActionHeight}"
+                                 AutomationProperties.Name="Save">
+                        <SplitButton.Flyout>
+                            <MenuFlyout x:Name="SaveMenu" Placement="Top" Opening="OpenSaveMenu" Closed="CloseMenu" />
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    <ToggleSplitButton x:Name="Microphone" Grid.Column="2" Click="ToggleMicrophone" Height="{StaticResource QuickActionHeight}"
+                                       AutomationProperties.Name="Microphone" ToolTipService.ToolTip="Microphone">
+                        <FontIcon x:Name="MicrophoneIcon" Glyph="&#xEC54;" FontSize="16" />
+                        <ToggleSplitButton.Flyout>
+                            <MenuFlyout x:Name="MicrophoneMenu" Placement="Top" Opening="OpenMicrophoneMenu" Closed="CloseMenu" />
+                        </ToggleSplitButton.Flyout>
+                    </ToggleSplitButton>
+                    <ToggleSplitButton x:Name="SystemAudio" Grid.Column="3" Click="ToggleSystem" Height="{StaticResource QuickActionHeight}"
+                                       AutomationProperties.Name="System audio" ToolTipService.ToolTip="System audio">
+                        <FontIcon x:Name="SystemAudioIcon" Glyph="&#xE74F;" FontSize="16" />
+                        <ToggleSplitButton.Flyout>
+                            <MenuFlyout x:Name="SystemMenu" Placement="Top" Opening="OpenSystemMenu" Closed="CloseMenu" />
+                        </ToggleSplitButton.Flyout>
+                    </ToggleSplitButton>
+                    <Button x:Name="Gear" Grid.Column="4" Width="36" Height="{StaticResource QuickActionHeight}" Padding="0"
+                            Click="ToggleSettings" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
+                        <FontIcon Glyph="&#xE713;" FontSize="16" />
+                    </Button>
+                </Grid>
+                <TextBlock x:Name="PanelWarning" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed"
+                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                           Style="{StaticResource CaptionTextBlockStyle}" />
+            </Grid>
+        </Border>
+        <Popup x:Name="SettingsPopup" PlacementTarget="{x:Bind QuickPanel}" DesiredPlacement="TopEdgeAlignedRight"
+               VerticalOffset="-4" ShouldConstrainToRootBounds="False">
+            <Popup.SystemBackdrop>
+                <DesktopAcrylicBackdrop />
+            </Popup.SystemBackdrop>
+        </Popup>
+    </Grid>
+</Window>

@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>hearlier</AssemblyName>
+    <RootNamespace>Hearlier</RootNamespace>
+    <ApplicationIcon>..\assets\hearlier.ico</ApplicationIcon>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <PlatformTarget Condition="'$(RuntimeIdentifier)' == 'win-x64'">x64</PlatformTarget>
+    <PlatformTarget Condition="'$(RuntimeIdentifier)' == 'win-arm64'">ARM64</PlatformTarget>
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RustTarget Condition="'$(RuntimeIdentifier)' == 'win-x64'">x86_64-pc-windows-msvc</RustTarget>
+    <RustTarget Condition="'$(RuntimeIdentifier)' == 'win-arm64'">aarch64-pc-windows-msvc</RustTarget>
+    <RustProfile Condition="'$(Configuration)' == 'Release'">release</RustProfile>
+    <RustProfile Condition="'$(RustProfile)' == ''">debug</RustProfile>
+    <CargoProfileFlag Condition="'$(RustProfile)' == 'release'">--release</CargoProfileFlag>
+    <RustTargetDirectory>$(MSBuildProjectDirectory)\..\target</RustTargetDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.9457" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.7.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.7.0" />
+    <Content Include="$(RustTargetDirectory)\$(RustTarget)\$(RustProfile)\hearlier_core.dll"
+             Link="hearlier_core.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(ApplicationIcon)" Link="hearlier.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="BuildRustCore" BeforeTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Error Condition="'$(RustTarget)' == ''" Text="hearlier supports win-x64 and win-arm64." />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\.."
+          Command="cargo build --lib --locked --target $(RustTarget) --target-dir &quot;$(RustTargetDirectory)&quot; $(CargoProfileFlag)" />
+  </Target>
+</Project>

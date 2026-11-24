@@ -1,0 +1,44 @@
+<Window
+    x:Class="Hearlier.TrayMenuWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="hearlier menu">
+    <Window.SystemBackdrop>
+        <DesktopAcrylicBackdrop />
+    </Window.SystemBackdrop>
+
+    <StackPanel x:Name="Root" MinWidth="188" Padding="4" Spacing="1"
+                Background="Transparent" TabFocusNavigation="Cycle" XYFocusKeyboardNavigation="Enabled">
+        <StackPanel.Resources>
+            <Style x:Key="TrayMenuButtonStyle" TargetType="Button">
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="Padding" Value="10,5" />
+                <Setter Property="MinHeight" Value="32" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="KeyboardAcceleratorPlacementMode" Value="Hidden" />
+            </Style>
+        </StackPanel.Resources>
+        <StackPanel.KeyboardAccelerators>
+            <KeyboardAccelerator Key="Escape" Invoked="DismissWithKeyboard" />
+        </StackPanel.KeyboardAccelerators>
+
+        <Button x:Name="OpenButton" Content="Open hearlier" Style="{StaticResource TrayMenuButtonStyle}" Click="Open">
+            <Button.KeyboardAccelerators>
+                <KeyboardAccelerator Key="O" />
+            </Button.KeyboardAccelerators>
+        </Button>
+        <Button Content="Settings" Style="{StaticResource TrayMenuButtonStyle}" Click="OpenSettings">
+            <Button.KeyboardAccelerators>
+                <KeyboardAccelerator Key="S" />
+            </Button.KeyboardAccelerators>
+        </Button>
+        <Border Height="1" Margin="5,3" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+        <Button Content="Exit" Style="{StaticResource TrayMenuButtonStyle}" Click="Exit">
+            <Button.KeyboardAccelerators>
+                <KeyboardAccelerator Key="X" />
+            </Button.KeyboardAccelerators>
+        </Button>
+    </StackPanel>
+</Window>
