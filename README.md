@@ -17,9 +17,9 @@ Audio history is stored locally and cleared when the app exits.
 
 ## Download
 
-Download the ZIP for your Windows 11 PC (`win-x64` or `win-arm64`) from the [latest release](https://github.com/newbialywhodis/hearlier/releases/latest). Extract the whole archive and run `hearlier.exe` from the extracted folder.
+On Windows 11, open the [latest release](https://github.com/newbialywhodis/hearlier/releases/latest) and choose the `win-x64-setup.exe` or `win-arm64-setup.exe` asset for your PC if available. Run Setup, then open hearlier from the Start menu. Setup includes the Microsoft Visual C++ Redistributable and may ask for administrator approval if it needs to install or update it.
 
-The ZIP bundles .NET and the Windows App SDK. The app also requires the [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/) for your architecture.
+For a portable copy, download the matching ZIP, extract the whole archive, and run `hearlier.exe` from the extracted folder. The ZIP bundles .NET and the Windows App SDK and requires the [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/) for your architecture.
 
 ## Usage
 
@@ -58,4 +58,4 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-GitHub Actions runs the Rust tests and builds both Windows ZIPs before publishing them to GitHub Releases with generated release notes. Tags use the `vMAJOR.MINOR.PATCH` format.
+GitHub Actions runs the Rust tests and publishes an Inno Setup installer and a portable ZIP for each Windows architecture, with generated release notes. Tags use the `vMAJOR.MINOR.PATCH` format.

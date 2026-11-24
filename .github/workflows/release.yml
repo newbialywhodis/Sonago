@@ -100,11 +100,52 @@ jobs:
               Compress-Archive -LiteralPath $output -DestinationPath "$output.zip"
           }
 
+      - name: Build Inno Setup installers
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $dist = Join-Path $env:RUNNER_TEMP 'hearlier-release'
+          $compilerSetup = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.1-x64.exe'
+          $compilerDir = Join-Path $env:RUNNER_TEMP 'hearlier-inno'
+          $compilerUrl = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe'
+          Invoke-WebRequest -Uri $compilerUrl -OutFile $compilerSetup
+          $expectedHash = '8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0'
+          if ((Get-FileHash -LiteralPath $compilerSetup).Hash -ne $expectedHash) {
+              throw 'Inno Setup download failed SHA-256 verification.'
+          }
+          $arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER /DIR=`"$compilerDir`""
+          $process = Start-Process -FilePath $compilerSetup -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+              throw "Inno Setup compiler installation failed (code $($process.ExitCode))."
+          }
+
+          $iscc = Join-Path $compilerDir 'ISCC.exe'
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          foreach ($arch in 'x64', 'arm64') {
+              $name = "hearlier-$env:GITHUB_REF_NAME-win-$arch"
+              $appDir = Join-Path $dist $name
+              $redistName = "vc_redist.$arch.exe"
+              $redist = Join-Path $env:RUNNER_TEMP $redistName
+              Invoke-WebRequest -Uri "https://aka.ms/vc14/$redistName" -OutFile $redist
+              $signature = Get-AuthenticodeSignature -LiteralPath $redist
+              if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch '^CN=Microsoft Corporation,') {
+                  throw "$redistName failed Microsoft signature verification."
+              }
+
+              & $iscc "/DAppVersion=$version" "/DAppArch=$arch" "/DAppDir=$appDir" "/DRedistPath=$redist" `
+                  "/O$dist" installer/hearlier.iss
+              if (!(Test-Path -LiteralPath (Join-Path $dist "$name-setup.exe") -PathType Leaf)) {
+                  throw "Missing Inno Setup installer for $arch."
+              }
+          }
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $dist = Join-Path $env:RUNNER_TEMP 'hearlier-release'
-          $x64 = Join-Path $dist "hearlier-$env:GITHUB_REF_NAME-win-x64.zip"
-          $arm64 = Join-Path $dist "hearlier-$env:GITHUB_REF_NAME-win-arm64.zip"
-          gh release create $env:GITHUB_REF_NAME $x64 $arm64 --verify-tag --generate-notes
+          $assets = foreach ($arch in 'x64', 'arm64') {
+              $name = "hearlier-$env:GITHUB_REF_NAME-win-$arch"
+              Join-Path $dist "$name-setup.exe"
+              Join-Path $dist "$name.zip"
+          }
+          gh release create $env:GITHUB_REF_NAME @assets --verify-tag --generate-notes
