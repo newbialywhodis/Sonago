@@ -133,10 +133,10 @@
                             <MenuFlyout x:Name="SystemMenu" Placement="Top" Opening="OpenSystemMenu" Closed="CloseMenu" />
                         </ToggleSplitButton.Flyout>
                     </ToggleSplitButton>
-                    <Button x:Name="Gear" Grid.Column="4" Width="36" Height="{StaticResource QuickActionHeight}" Padding="0"
-                            Click="ToggleSettings" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
+                    <ToggleButton x:Name="Gear" Grid.Column="4" Width="36" Height="{StaticResource QuickActionHeight}" Padding="0"
+                                  Click="ToggleSettings" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
                         <FontIcon Glyph="&#xE713;" FontSize="16" />
-                    </Button>
+                    </ToggleButton>
                 </Grid>
                 <TextBlock x:Name="PanelWarning" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed"
                            TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
@@ -144,7 +144,10 @@
             </Grid>
         </Border>
         <Popup x:Name="SettingsPopup" PlacementTarget="{x:Bind QuickPanel}" DesiredPlacement="TopEdgeAlignedRight"
-               VerticalOffset="-4" ShouldConstrainToRootBounds="False">
+               VerticalOffset="-4" ShouldConstrainToRootBounds="False" Opened="OnSettingsPopupOpened">
+            <Popup.ChildTransitions>
+                <PopupThemeTransition FromHorizontalOffset="0" FromVerticalOffset="8" />
+            </Popup.ChildTransitions>
             <Popup.SystemBackdrop>
                 <DesktopAcrylicBackdrop />
             </Popup.SystemBackdrop>

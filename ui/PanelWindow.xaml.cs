@@ -195,14 +195,15 @@ public sealed partial class PanelWindow : Window
             return;
         }
         var state = Native.Call<Snapshot>(new { action = "snapshot" });
-        Microphone.IsEnabled = SystemAudio.IsEnabled = draft is null;
         Microphone.IsChecked = state.MicOn;
         MicrophoneIcon.Glyph = state.MicOn ? "\uE720" : "\uEC54";
         SystemAudio.IsChecked = state.SystemOn;
         SystemAudioIcon.Glyph = state.SystemOn ? "\uE767" : "\uE74F";
-        SaveButton.IsEnabled = draft is null && state.CanSave;
+        SaveButton.IsEnabled = state.CanSave;
         ToolTipService.SetToolTip(SaveButton, state.SaveLabel);
         AutomationProperties.SetHelpText(SaveButton, state.SaveLabel);
+        SyncSourceEnabled(0, SystemEnabled, state.SystemOn);
+        SyncSourceEnabled(1, MicEnabled, state.MicOn);
         string warning = commandError ?? state.Warning ?? "";
         bool needsResize = PanelWarning.Text != warning;
         PanelWarning.Text = warning;
@@ -212,6 +213,16 @@ public sealed partial class PanelWindow : Window
         {
             Resize();
         }
+    }
+
+    private void SyncSourceEnabled(int track, CheckBox field, bool enabled)
+    {
+        if (draft is null || draft.Settings.Sources[track].Enabled == enabled)
+            return;
+
+        // Refresh also sees a source switched off when writing the settings file fails.
+        draft.Settings.Sources[track] = draft.Settings.Sources[track] with { Enabled = enabled };
+        field.IsChecked = enabled;
     }
 
     private void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)
@@ -299,7 +310,8 @@ public sealed partial class PanelWindow : Window
         menu.Items.Clear();
         try
         {
-            foreach (var device in Native.Call<DeviceChoice[]>(new { action = "devices", track }))
+            var devices = Native.Call<DeviceChoice[]>(new { action = "devices", track });
+            foreach (var device in devices)
             {
                 var item = new RadioMenuFlyoutItem
                 {
@@ -307,7 +319,7 @@ public sealed partial class PanelWindow : Window
                     GroupName = track == 0 ? "SystemOutput" : "MicrophoneInput",
                     IsChecked = device.Selected
                 };
-                item.Click += (_, _) => QuickCommand(new { action = "select_device", track, device.Endpoint });
+                item.Click += (_, _) => SelectDevice(track, devices, device.Endpoint);
                 menu.Items.Add(item);
             }
         }
@@ -316,6 +328,15 @@ public sealed partial class PanelWindow : Window
             menu.Items.Add(new MenuFlyoutItem { Text = "Could not list audio devices", IsEnabled = false });
             commandError = error.Message;
             Refresh();
+        }
+    }
+
+    private void SelectDevice(int track, DeviceChoice[] devices, string? endpoint)
+    {
+        if (QuickCommand(new { action = "select_device", track, endpoint }) && draft is not null)
+        {
+            draft.Settings.Sources[track] = draft.Settings.Sources[track] with { Endpoint = endpoint };
+            SetDeviceChoices(track, devices, endpoint);
         }
     }
 
@@ -370,11 +391,11 @@ public sealed partial class PanelWindow : Window
         }
     }
 
-    private void QuickCommand(object command)
+    private bool QuickCommand(object command)
     {
         if (!shown)
         {
-            return;
+            return false;
         }
         commandError = null;
         try
@@ -386,6 +407,7 @@ public sealed partial class PanelWindow : Window
             commandError = error.Message;
         }
         Refresh();
+        return commandError is null;
     }
 
     private void ToggleSettings(object sender, RoutedEventArgs args)
@@ -426,7 +448,12 @@ public sealed partial class PanelWindow : Window
         // Leave room for screen-edge padding at the top of the work area.
         SettingsPanel.Height = Math.Clamp((AppWindow.Position.Y - work.Y) / scale - 16, 1, SettingsHeight);
         SettingsPopup.IsOpen = true;
-        SystemEnabled.Focus(FocusState.Programmatic);
+    }
+
+    private void OnSettingsPopupOpened(object sender, object args)
+    {
+        if (SettingsPopup.IsOpen)
+            SystemEnabled.Focus(FocusState.Programmatic);
     }
 
     private void OpenSettings()
@@ -441,10 +468,8 @@ public sealed partial class PanelWindow : Window
         CancelButton.Content = setup ? "Exit" : "Cancel";
         SystemEnabled.IsChecked = settings.Sources[0].Enabled;
         MicEnabled.IsChecked = settings.Sources[1].Enabled;
-        SystemDevice.ItemsSource = draft.Devices[0].Select(device => device.Label).ToArray();
-        MicDevice.ItemsSource = draft.Devices[1].Select(device => device.Label).ToArray();
-        SystemDevice.SelectedIndex = Array.FindIndex(draft.Devices[0], device => device.Selected);
-        MicDevice.SelectedIndex = Array.FindIndex(draft.Devices[1], device => device.Selected);
+        SetDeviceChoices(0, draft.Devices[0], settings.Sources[0].Endpoint);
+        SetDeviceChoices(1, draft.Devices[1], settings.Sources[1].Endpoint);
         Retention.Value = settings.Retention;
         Minutes.Value = settings.Minutes;
         Hotkey.Text = settings.Hotkey;
@@ -454,7 +479,7 @@ public sealed partial class PanelWindow : Window
         Notifications.IsChecked = settings.Notifications;
         if (setup)
             SettingsPanel.Visibility = Visibility.Visible;
-        AutomationProperties.SetName(Gear, "Close settings");
+        Gear.IsChecked = true;
         ToolTipService.SetToolTip(Gear, "Close settings");
         UpdateSettingsNotice(draft.Issue);
     }
@@ -470,7 +495,7 @@ public sealed partial class PanelWindow : Window
         settingsError = null;
         if (SettingsPopup.Child is null)
             SettingsPanel.Visibility = Visibility.Collapsed;
-        AutomationProperties.SetName(Gear, "Settings");
+        Gear.IsChecked = false;
         ToolTipService.SetToolTip(Gear, "Settings");
         if (restoreFocus)
         {
@@ -544,6 +569,14 @@ public sealed partial class PanelWindow : Window
             commandError = null;
             CloseSettings();
         }
+    }
+
+    private void SetDeviceChoices(int track, DeviceChoice[] devices, string? endpoint)
+    {
+        var combo = track == 0 ? SystemDevice : MicDevice;
+        draft!.Devices[track] = devices;
+        combo.ItemsSource = devices.Select(device => device.Label).ToArray();
+        combo.SelectedIndex = Array.FindIndex(devices, device => device.Endpoint == endpoint);
     }
 
     private string? SelectedEndpoint(int track, ComboBox combo) =>
