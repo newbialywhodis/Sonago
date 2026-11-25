@@ -32,8 +32,81 @@ internal static class Native
     [DllImport("user32.dll", ExactSpelling = true)]
     internal static extern uint GetDpiForWindow(nint window);
 
+    [DllImport("gdi32.dll", ExactSpelling = true)]
+    private static extern nint CreateRoundRectRgn(int left, int top, int right, int bottom, int ellipseWidth, int ellipseHeight);
+
+    [DllImport("gdi32.dll", ExactSpelling = true)]
+    private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
+
+    [DllImport("gdi32.dll", ExactSpelling = true)]
+    private static extern int CombineRgn(nint destination, nint first, nint second, int mode);
+
+    [DllImport("gdi32.dll", ExactSpelling = true)]
+    private static extern bool DeleteObject(nint handle);
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    private static extern int SetWindowRgn(nint window, nint region, bool redraw);
+
+    internal static void SetPanelRegion(nint window, int width, int height, int offset, int diameter, int visibleHeight)
+    {
+        var region = CreateRoundRectRgn(0, offset, width + 1, offset + height + 1, diameter, diameter);
+        if (region == 0)
+            return;
+        if (offset + height > visibleHeight)
+        {
+            // Keep the moving corners, with a straight cut where the taskbar occludes them.
+            const int intersect = 1; // RGN_AND
+            var clip = CreateRectRgn(0, 0, width, visibleHeight);
+            bool clipped = clip != 0 && CombineRgn(region, region, clip, intersect) != 0;
+            if (clip != 0)
+                DeleteObject(clip);
+            if (!clipped)
+            {
+                DeleteObject(region);
+                return;
+            }
+        }
+        // On success Windows takes ownership of the region.
+        if (SetWindowRgn(window, region, true) == 0)
+            DeleteObject(region);
+    }
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    private static extern nint GetForegroundWindow();
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    private static extern nint GetAncestor(nint window, uint flags);
+
+    internal static bool OwnsForegroundWindow(nint window)
+    {
+        const uint rootOwner = 3;
+        return GetAncestor(GetForegroundWindow(), rootOwner) == window;
+    }
+
     [DllImport("dwmapi.dll", ExactSpelling = true)]
     private static extern int DwmSetWindowAttribute(nint window, uint attribute, in int value, uint size);
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    private static extern int GetWindowLongW(nint window, int index);
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    private static extern int SetWindowLongW(nint window, int index, int value);
+
+    internal static void DisablePanelFrame(nint window)
+    {
+        const int windowStyle = -16;
+        const int popup = unchecked((int)0x80000000);
+        SetWindowLongW(window, windowStyle, GetWindowLongW(window, windowStyle) | popup);
+        const uint cornerPreference = 33;
+        const int doNotRound = 1; // The animated region supplies the corners.
+        _ = DwmSetWindowAttribute(window, cornerPreference, doNotRound, sizeof(int));
+        const uint nonClientRenderingPolicy = 2;
+        const int disabled = 1;
+        _ = DwmSetWindowAttribute(window, nonClientRenderingPolicy, disabled, sizeof(int));
+        const uint borderColor = 34;
+        const int noBorder = -2; // DWMWA_COLOR_NONE
+        _ = DwmSetWindowAttribute(window, borderColor, noBorder, sizeof(int));
+    }
 
     internal static void DisableWindowTransitions(nint window)
     {

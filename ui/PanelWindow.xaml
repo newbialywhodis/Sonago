@@ -103,7 +103,11 @@
                     Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
         </Grid>
 
-        <Border x:Name="QuickPanel" Grid.Row="1" Padding="12,8">
+        <Border x:Name="QuickPanel" VerticalAlignment="Top" Padding="12,8" BorderThickness="1"
+                BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" CornerRadius="{ThemeResource OverlayCornerRadius}">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="PanelOffset" />
+            </Border.RenderTransform>
             <Border.Resources>
                 <x:Double x:Key="QuickActionHeight">32</x:Double>
             </Border.Resources>

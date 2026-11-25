@@ -20,11 +20,13 @@ public sealed partial class PanelWindow : Window
     private const int SetupHeight = 442;
 
     private readonly Action shutdown;
+    private readonly nint hwnd;
     private readonly DispatcherQueueTimer refreshTimer;
     private readonly DispatcherQueueTimer dismissTimer;
     private bool setup;
     private bool shown;
     private bool active;
+    private bool watchingOutsideClicks;
     private bool pickingFolder;
     private bool exiting;
     private string? commandError;
@@ -36,13 +38,11 @@ public sealed partial class PanelWindow : Window
     {
         this.shutdown = shutdown;
         InitializeComponent();
+        hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "hearlier.ico"));
-        var presenter = OverlappedPresenter.Create();
-        presenter.SetBorderAndTitleBar(true, false);
-        presenter.IsResizable = false;
-        presenter.IsMaximizable = false;
-        presenter.IsMinimizable = false;
+        var presenter = OverlappedPresenter.CreateForContextMenu();
         AppWindow.SetPresenter(presenter);
+        Native.DisableWindowTransitions(hwnd);
         AppWindow.Closing += OnClosing;
         Activated += OnActivated;
 
@@ -76,7 +76,7 @@ public sealed partial class PanelWindow : Window
         Show(newAnchor: true);
     }
 
-    internal void ToggleFromTray()
+    internal void ToggleFromTray(bool activate)
     {
         if (shown && !setup && !pickingFolder)
         {
@@ -84,7 +84,7 @@ public sealed partial class PanelWindow : Window
         }
         else if (!pickingFolder)
         {
-            ShowFromTray(settings: false);
+            Show(newAnchor: !shown, activate: activate || setup);
         }
     }
 
@@ -101,20 +101,37 @@ public sealed partial class PanelWindow : Window
         Show(newAnchor: !shown);
     }
 
-    private void Show(bool newAnchor)
+    private void Show(bool newAnchor, bool activate = true)
     {
         dismissTimer.Stop();
         AppWindow.IsShownInSwitchers = setup;
+        var presenter = (OverlappedPresenter)AppWindow.Presenter;
+        if (!setup && presenter.HasBorder)
+        {
+            presenter.SetBorderAndTitleBar(false, false);
+            Native.DisablePanelFrame(hwnd);
+        }
+        presenter.IsAlwaysOnTop = !setup;
         QuickPanel.Visibility = setup ? Visibility.Collapsed : Visibility.Visible;
+        Root.IsHitTestVisible = true;
         Title = setup ? "Set up hearlier" : "hearlier";
         shown = true;
         Refresh(resize: false);
         Resize(newAnchor, slideIn: newAnchor && !setup && draft is null);
-        Activate();
+        if (!activate && Native.Call<bool>(new { action = "watch_outside_clicks", watch = true }))
+        {
+            watchingOutsideClicks = true;
+            AppWindow.Show(activateWindow: false);
+        }
+        else
+        {
+            StopWatchingOutsideClicks();
+            Activate();
+        }
         refreshTimer.Start();
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (shown)
+            if (shown && !watchingOutsideClicks)
             {
                 if (setup)
                     SystemEnabled.Focus(FocusState.Programmatic);
@@ -133,6 +150,8 @@ public sealed partial class PanelWindow : Window
             return;
         }
         shown = false;
+        Root.IsHitTestVisible = false;
+        StopWatchingOutsideClicks();
         dismissTimer.Stop();
         refreshTimer.Stop();
         openMenu?.Hide();
@@ -141,10 +160,26 @@ public sealed partial class PanelWindow : Window
         SlideOut();
     }
 
+    internal void DismissPassivePanel()
+    {
+        if (watchingOutsideClicks)
+            Hide();
+    }
+
+    private void StopWatchingOutsideClicks()
+    {
+        if (watchingOutsideClicks)
+        {
+            watchingOutsideClicks = false;
+            Native.Run(new { action = "watch_outside_clicks", watch = false });
+        }
+    }
+
     internal void CloseForExit()
     {
         exiting = true;
         shown = false;
+        StopWatchingOutsideClicks();
         refreshTimer.Stop();
         dismissTimer.Stop();
         StopSlide();
@@ -197,20 +232,26 @@ public sealed partial class PanelWindow : Window
         active = e.WindowActivationState != WindowActivationState.Deactivated;
         if (active)
         {
+            StopWatchingOutsideClicks();
             dismissTimer.Stop();
         }
         else if (shown && !setup && !pickingFolder)
         {
-            // Give the tray callback time to handle the same click that moved activation.
-            dismissTimer.Start();
+            // Explorer delivers the tray toggle on button-up, after deactivation.
+            if (Native.Call<bool>(new { action = "pointer_over_tray", require_press = false }))
+                dismissTimer.Start();
+            else
+                DispatcherQueue.TryEnqueue(DismissIfInactive);
         }
     }
 
     private void DismissIfInactive()
     {
-        if (shown && !active && !setup && !pickingFolder && openMenu is null)
+        if (shown && !active && !watchingOutsideClicks && !setup && !pickingFolder && openMenu is null)
         {
-            if (Native.Call<bool>(new { action = "tray_pointer_down" }))
+            // A WinUI input or popup window can hold focus while the host is deactivated.
+            if (Native.OwnsForegroundWindow(hwnd) ||
+                Native.Call<bool>(new { action = "pointer_over_tray", require_press = true }))
                 dismissTimer.Start();
             else
                 Hide();
@@ -370,7 +411,8 @@ public sealed partial class PanelWindow : Window
         if (!shown || setup || draft is null || !Root.IsLoaded || SettingsPopup.IsOpen)
             return;
 
-        FinishSlide();
+        if (slideFrom.HasValue)
+            FinishSlide();
         if (SettingsPopup.Child is null)
         {
             Root.Children.Remove(SettingsPanel);

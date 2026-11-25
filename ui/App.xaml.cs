@@ -70,10 +70,15 @@ public sealed partial class App : Application
             switch (action)
             {
                 case "toggle":
+                case "toggle_activate":
                     trayMenu?.Dismiss();
-                    Panel.ToggleFromTray();
+                    Panel.ToggleFromTray(activate: action == "toggle_activate");
+                    break;
+                case "outside_click":
+                    panel?.DismissPassivePanel();
                     break;
                 case "context_menu":
+                    panel?.DismissPassivePanel();
                     trayMenu ??= new TrayMenuWindow(
                         settings => Panel.ShowFromTray(settings),
                         () => Native.Run(new { action = "quit" }));
@@ -90,13 +95,13 @@ public sealed partial class App : Application
     private void Shutdown()
     {
         stopping = true;
+        panel?.CloseForExit();
         if (started)
         {
             Native.Stop();
             started = false;
         }
         trayMenu?.CloseForExit();
-        panel?.CloseForExit();
         Exit();
     }
 }

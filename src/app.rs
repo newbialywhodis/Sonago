@@ -304,7 +304,14 @@ impl App {
 
     fn on_event(&mut self, event: AppEvent, actions: &mut Vec<&'static str>) {
         match event {
-            AppEvent::Tray(Event::Toggle) => actions.push("toggle"),
+            AppEvent::Tray(Event::OutsideClick) => actions.push("outside_click"),
+            AppEvent::Tray(Event::Toggle { activate }) => {
+                actions.push(if activate {
+                    "toggle_activate"
+                } else {
+                    "toggle"
+                });
+            }
             AppEvent::Tray(Event::ContextMenu(rect)) => {
                 self.menu_anchor = Some(rect);
                 actions.push("context_menu");

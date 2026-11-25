@@ -47,7 +47,12 @@ enum Command {
         width: i32,
         height: i32,
     },
-    TrayPointerDown,
+    PointerOverTray {
+        require_press: bool,
+    },
+    WatchOutsideClicks {
+        watch: bool,
+    },
     FocusTray,
     CanQuit,
     Quit,
@@ -217,7 +222,11 @@ impl App {
                 height,
                 PlacementTarget::TrayMenu,
             )?),
-            Command::TrayPointerDown => value(self.tray_pointer_down()),
+            Command::PointerOverTray { require_press } => value(
+                (!require_press || tray::left_button_down())
+                    && tray::over_icon(self.tray.hwnd, tray::cursor()),
+            ),
+            Command::WatchOutsideClicks { watch } => value(self.tray.watch_outside_clicks(watch)),
             Command::FocusTray => {
                 self.tray.focus();
                 value(())
@@ -259,17 +268,6 @@ impl App {
             }),
             issue,
         }
-    }
-
-    fn tray_pointer_down(&self) -> bool {
-        self.tray.rect().is_some_and(|rect| {
-            let point = tray::cursor();
-            point.x >= rect.left
-                && point.x < rect.right
-                && point.y >= rect.top
-                && point.y < rect.bottom
-                && tray::left_button_down()
-        })
     }
 
     fn save_lengths(&self) -> Vec<SaveLength> {

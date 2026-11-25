@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 using Windows.Graphics;
@@ -8,19 +9,16 @@ namespace Hearlier;
 
 public sealed partial class PanelWindow
 {
-    private const int SlideDistanceDip = 8;
-    private const double SlideMilliseconds = 180;
     private readonly UISettings uiSettings = new();
     private RectInt32 restingBounds;
-    private int slideOutY;
-    private (int From, int To)? slide;
+    private int travel;
+    private double panelScale;
+    private int offset;
+    private int? slideFrom;
     private long slideStart;
 
     private void Resize(bool newAnchor = false, bool slideIn = false)
     {
-        var position = AppWindow.Position;
-        bool reversingExit = slide is { } current && current.From < current.To;
-        StopSlide();
         var outer = AppWindow.Size;
         var client = AppWindow.ClientSize;
         double currentScale = WindowDpi() / 96d;
@@ -40,50 +38,52 @@ public sealed partial class PanelWindow
         });
 
         var bounds = new RectInt32(place.X, place.Y, place.Width, place.Height);
-        bool sameBounds = restingBounds.Equals(bounds);
+        int distance = place.WorkBottom - place.Y;
+        bool sameBounds = restingBounds.Equals(bounds) && travel == distance && panelScale == place.Dpi / 96d;
+        if (!newAnchor && sameBounds)
+            return;
+        bool reversing = slideFrom.HasValue && sameBounds;
+        StopSlide();
         restingBounds = bounds;
-        int distance = (int)Math.Round(SlideDistanceDip * place.Dpi / 96d);
-        slideOutY = bounds.Y + Math.Clamp(place.WorkBottom - (bounds.Y + bounds.Height), 0, distance);
-        if (slideIn && uiSettings.AnimationsEnabled)
-        {
-            bounds.Y = reversingExit && sameBounds
-                ? Math.Clamp(position.Y, bounds.Y, slideOutY)
-                : slideOutY;
-        }
-        if (position.X != bounds.X || position.Y != bounds.Y || outer.Width != bounds.Width || outer.Height != bounds.Height)
-        {
-            AppWindow.MoveAndResize(bounds);
-        }
-        if (bounds.Y != restingBounds.Y)
-            StartSlide(bounds.Y, restingBounds.Y);
+        travel = distance;
+        panelScale = place.Dpi / 96d;
+        // The HWND itself ends at the work area. Only its contents travel towards the taskbar.
+        if (!setup)
+            bounds.Height = travel;
+        AppWindow.MoveAndResize(bounds);
+        if (setup)
+            return;
+        bool animate = slideIn && uiSettings.AnimationsEnabled;
+        SetOffset(animate ? (reversing ? offset : travel - 1) : 0);
+        if (animate)
+            StartSlide(offset);
     }
 
     private void SlideOut()
     {
-        var position = AppWindow.Position;
-        StopSlide();
-        if (!setup && uiSettings.AnimationsEnabled && position.X == restingBounds.X &&
-            position.Y >= restingBounds.Y && position.Y < slideOutY)
+        if (QuickPanel.Visibility != Visibility.Visible || !uiSettings.AnimationsEnabled)
         {
-            StartSlide(position.Y, slideOutY);
+            FinishSlide();
             return;
         }
-        AppWindow.Hide();
+        StartSlide(offset);
     }
 
-    private void StartSlide(int from, int to)
+    private void StartSlide(int from)
     {
-        slide = (from, to);
-        slideStart = Stopwatch.GetTimestamp();
-        CompositionTarget.Rendering += AdvanceSlide;
+        if (!slideFrom.HasValue)
+            CompositionTarget.Rendering += AdvanceSlide;
+        slideFrom = from;
+        slideStart = 0;
     }
 
     private void AdvanceSlide(object? sender, object args)
     {
-        if (slide is not { } current)
+        if (slideFrom is not int from)
             return;
-
-        double progress = Stopwatch.GetElapsedTime(slideStart).TotalMilliseconds / SlideMilliseconds;
+        if (slideStart == 0)
+            slideStart = Stopwatch.GetTimestamp();
+        double progress = Stopwatch.GetElapsedTime(slideStart).TotalMilliseconds / (shown ? 200 : 150);
         if (progress >= 1)
         {
             FinishSlide();
@@ -92,35 +92,38 @@ public sealed partial class PanelWindow
 
         double remaining = 1 - progress;
         double eased = shown ? 1 - remaining * remaining * remaining : progress * progress;
-        int y = current.From + (int)Math.Round((current.To - current.From) * eased);
-        if (AppWindow.Position.Y != y)
-            AppWindow.Move(new PointInt32(restingBounds.X, y));
+        int to = shown ? 0 : travel - 1;
+        int next = from + (int)Math.Round((to - from) * eased);
+        if (next != offset)
+            SetOffset(next);
+    }
+
+    private void SetOffset(int pixels)
+    {
+        offset = pixels;
+        PanelOffset.Y = pixels / panelScale;
+        int diameter = (int)Math.Round(2 * QuickPanel.CornerRadius.TopLeft * panelScale);
+        Native.SetPanelRegion(hwnd, restingBounds.Width, restingBounds.Height, pixels, diameter, travel);
     }
 
     private void FinishSlide()
     {
-        if (slide is null)
-            return;
-
         StopSlide();
-        if (shown)
-            AppWindow.Move(new PointInt32(restingBounds.X, restingBounds.Y));
-        else
+        if (!shown)
             AppWindow.Hide();
+        else
+            SetOffset(0);
     }
 
     private void StopSlide()
     {
-        if (slide is null)
-            return;
-
         CompositionTarget.Rendering -= AdvanceSlide;
-        slide = null;
+        slideFrom = null;
     }
 
     private uint WindowDpi()
     {
-        uint dpi = Native.GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
+        uint dpi = Native.GetDpiForWindow(hwnd);
         return dpi == 0 ? 96 : dpi;
     }
 }

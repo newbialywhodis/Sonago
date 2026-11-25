@@ -6,8 +6,13 @@ use std::{cell::Cell, mem::size_of, os::windows::ffi::OsStrExt};
 use windows::{
     Win32::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM},
+        Graphics::Gdi::PtInRect,
         System::{LibraryLoader::GetModuleHandleW, Threading::GetCurrentProcessId},
-        UI::{Input::KeyboardAndMouse::*, Shell::*, WindowsAndMessaging::*},
+        UI::{
+            Input::{KeyboardAndMouse::*, *},
+            Shell::*,
+            WindowsAndMessaging::*,
+        },
     },
     core::{PCWSTR, w},
 };
@@ -17,7 +22,8 @@ const TRAY_ICON_ID: u32 = 1;
 const NIN_KEYSELECT: u32 = NIN_SELECT | 1;
 
 pub enum Event {
-    Toggle,
+    Toggle { activate: bool },
+    OutsideClick,
     ContextMenu(RECT),
     Save(i32),
     Open,
@@ -101,6 +107,17 @@ impl Tray {
 
     pub fn focus(&self) {
         let _ = unsafe { Shell_NotifyIconW(NIM_SETFOCUS, &self.icon) };
+    }
+
+    pub fn watch_outside_clicks(&self, watch: bool) -> bool {
+        // A panel shown without activation won't receive a deactivation on the first outside click.
+        let mouse = RAWINPUTDEVICE {
+            usUsagePage: 1, // Generic Desktop
+            usUsage: 2,     // Mouse
+            dwFlags: if watch { RIDEV_INPUTSINK } else { RIDEV_REMOVE },
+            hwndTarget: if watch { self.hwnd } else { HWND::default() },
+        };
+        unsafe { RegisterRawInputDevices(&[mouse], size_of::<RAWINPUTDEVICE>() as u32) }.is_ok()
     }
 
     pub fn tooltip(&mut self, state: &str) {
@@ -204,10 +221,18 @@ unsafe extern "system" fn window_proc(
     lparam: LPARAM,
 ) -> LRESULT {
     let event = match message {
+        WM_INPUT => {
+            if outside_click(hwnd, lparam) {
+                crate::app::tray_event(Event::OutsideClick);
+            }
+            return unsafe { DefWindowProcW(hwnd, message, wparam, lparam) };
+        }
         WM_HOTKEY => Event::Save(wparam.0 as i32),
         TRAY_MESSAGE if (lparam.0 as u32 & 0xffff) == NIN_BALLOONUSERCLICK => Event::Open,
         TRAY_MESSAGE if matches!(lparam.0 as u32 & 0xffff, NIN_KEYSELECT | WM_LBUTTONUP) => {
-            Event::Toggle
+            Event::Toggle {
+                activate: (lparam.0 as u32 & 0xffff) == NIN_KEYSELECT,
+            }
         }
         TRAY_MESSAGE if (lparam.0 as u32 & 0xffff) == WM_CONTEXTMENU => {
             // Read the icon bounds before activating our window, which can close overflow.
@@ -218,7 +243,10 @@ unsafe extern "system" fn window_proc(
         id if id != 0 && id == TASKBAR_CREATED.get() => Event::Restore,
         _ => return unsafe { DefWindowProcW(hwnd, message, wparam, lparam) },
     };
-    if matches!(event, Event::Toggle | Event::ContextMenu(_)) {
+    if matches!(
+        event,
+        Event::Toggle { activate: true } | Event::ContextMenu(_)
+    ) {
         // Claim Explorer's activation without deactivating a panel we already own.
         let mut foreground_process = 0;
         unsafe {
@@ -243,6 +271,40 @@ fn icon_rect(hwnd: HWND) -> Option<RECT> {
         })
     }
     .ok()
+}
+
+pub fn over_icon(hwnd: HWND, point: POINT) -> bool {
+    icon_rect(hwnd).is_some_and(|rect| unsafe { PtInRect(&rect, point).as_bool() })
+}
+
+fn outside_click(tray: HWND, lparam: LPARAM) -> bool {
+    let mut input = RAWINPUT::default();
+    let mut size = size_of::<RAWINPUT>() as u32;
+    let read = unsafe {
+        GetRawInputData(
+            HRAWINPUT(lparam.0 as _),
+            RID_INPUT,
+            Some((&raw mut input).cast()),
+            &mut size,
+            size_of::<RAWINPUTHEADER>() as u32,
+        )
+    };
+    let buttons =
+        RI_MOUSE_LEFT_BUTTON_DOWN | RI_MOUSE_RIGHT_BUTTON_DOWN | RI_MOUSE_MIDDLE_BUTTON_DOWN;
+    if read != size_of::<RAWINPUT>() as u32
+        || input.header.dwType != RIM_TYPEMOUSE.0
+        || u32::from(unsafe { input.data.mouse.Anonymous.Anonymous.usButtonFlags }) & buttons == 0
+    {
+        return false;
+    }
+    let pos = unsafe { GetMessagePos() };
+    let point = POINT {
+        x: i32::from(pos as i16),
+        y: i32::from((pos >> 16) as i16),
+    };
+    let mut pid = 0;
+    unsafe { GetWindowThreadProcessId(WindowFromPoint(point), Some(&mut pid)) };
+    pid != unsafe { GetCurrentProcessId() } && !over_icon(tray, point)
 }
 
 fn app_icon() -> Result<HICON> {
