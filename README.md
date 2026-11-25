@@ -59,3 +59,7 @@ git push origin v0.1.0
 ```
 
 GitHub Actions runs the Rust tests and publishes an Inno Setup installer and a portable ZIP for each Windows architecture, with generated release notes. Tags use the `vMAJOR.MINOR.PATCH` format.
+
+## License
+
+hearlier is licensed under the [MIT License](LICENSE). Third-party license notices are included in the `licenses/` directory of each release.

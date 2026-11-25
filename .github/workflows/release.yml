@@ -70,6 +70,7 @@ jobs:
                   }
               }
 
+              Copy-Item -LiteralPath 'LICENSE' -Destination (Join-Path $output 'LICENSE') -ErrorAction Stop
               $notices = Join-Path $output 'licenses'
               foreach ($package in $cargo.packages | Where-Object source) {
                   $source = Split-Path -Parent $package.manifest_path
