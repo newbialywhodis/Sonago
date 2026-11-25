@@ -5,6 +5,8 @@
 
 hearlier is a native Windows 11 app that lets you save audio after it happens. It runs in the system tray and keeps a rolling history of system audio and microphone input, so you can save the last few minutes whenever you need them.
 
+![hearlier quick controls and settings](assets/hearlier-preview.png)
+
 ## Features
 
 - Independent system audio and microphone capture.
