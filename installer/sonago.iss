@@ -9,26 +9,27 @@
 #elif AppArch == "arm64"
   #define TargetArchitecture "arm64"
 #else
-  #error hearlier supports x64 and ARM64
+  #error Sonago supports x64 and ARM64
 #endif
 
 [Setup]
+; Keep the original ID so Setup upgrades existing installations.
 AppId=hearlier
-AppName=hearlier
+AppName=Sonago
 AppVersion={#AppVersion}
 AppPublisherURL=https://github.com/newbialywhodis/hearlier
 AppSupportURL=https://github.com/newbialywhodis/hearlier/issues
 AppUpdatesURL=https://github.com/newbialywhodis/hearlier/releases/latest
-DefaultDirName={localappdata}\Programs\hearlier
+DefaultDirName={localappdata}\Programs\Sonago
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 PrivilegesRequired=lowest
 MinVersion=10.0.22000
 ArchitecturesAllowed={#TargetArchitecture}
 ArchitecturesInstallIn64BitMode={#TargetArchitecture}
-SetupIconFile=..\assets\hearlier.ico
-UninstallDisplayIcon={app}\hearlier.exe
-OutputBaseFilename=hearlier-v{#AppVersion}-win-{#AppArch}-setup
+SetupIconFile=..\assets\sonago.ico
+UninstallDisplayIcon={app}\sonago.exe
+OutputBaseFilename=sonago-v{#AppVersion}-win-{#AppArch}-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -40,11 +41,21 @@ CloseApplications=no
 Source: "{#RedistPath}"; DestName: "{#RedistName}"; Flags: dontcopy noencryption
 Source: "{#AppDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+Type: files; Name: "{app}\hearlier.exe"
+Type: files; Name: "{app}\hearlier.ico"
+Type: files; Name: "{app}\hearlier.dll"
+Type: files; Name: "{app}\hearlier_core.dll"
+Type: files; Name: "{app}\hearlier.pri"
+Type: files; Name: "{app}\hearlier.deps.json"
+Type: files; Name: "{app}\hearlier.runtimeconfig.json"
+Type: files; Name: "{autoprograms}\hearlier.lnk"
+
 [Icons]
-Name: "{autoprograms}\hearlier"; Filename: "{app}\hearlier.exe"; WorkingDir: "{app}"
+Name: "{autoprograms}\Sonago"; Filename: "{app}\sonago.exe"; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\hearlier.exe"; Description: "Launch hearlier"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\sonago.exe"; Description: "Launch Sonago"; Flags: nowait postinstall skipifsilent
 
 [Code]
 const
@@ -95,10 +106,20 @@ begin
   else if (ExitCode = 3010) or (ExitCode = 1641) then
   begin
     NeedsRestart := True;
-    Result := 'Restart Windows and run hearlier Setup again to finish installation.';
+    Result := 'Restart Windows and run Sonago Setup again to finish installation.';
   end
   else if (ExitCode <> 0) and not HasVisualCppRuntime then
     Result := Format('Microsoft Visual C++ Redistributable installation failed (code %d).', [ExitCode]);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Command: String;
+begin
+  if (CurStep = ssPostInstall) and
+     RegQueryStringValue(HKCU, StartupKey, StartupName, Command) and
+     (CompareText(Command, ExpandConstant('"{app}\hearlier.exe"')) = 0) then
+    RegWriteStringValue(HKCU, StartupKey, StartupName, ExpandConstant('"{app}\sonago.exe"'));
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -107,6 +128,6 @@ var
 begin
   if (CurUninstallStep = usPostUninstall) and
      RegQueryStringValue(HKCU, StartupKey, StartupName, Command) and
-     (CompareText(Command, ExpandConstant('"{app}\hearlier.exe"')) = 0) then
+     (CompareText(Command, ExpandConstant('"{app}\sonago.exe"')) = 0) then
     RegDeleteValue(HKCU, StartupKey, StartupName);
 end;

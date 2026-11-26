@@ -45,8 +45,8 @@ pub fn write(snapshot: &Snapshot, writer: &mut (impl Write + Seek)) -> Result<()
         0x4489,
         &((snapshot.frames * FRAME_MS) as f64).to_be_bytes(),
     );
-    element(&mut buf, 0x4D80, b"hearlier");
-    element(&mut buf, 0x5741, b"hearlier");
+    element(&mut buf, 0x4D80, b"sonago");
+    element(&mut buf, 0x5741, b"sonago");
     write_element(writer, INFO, &buf)?;
 
     let tracks_pos = writer.stream_position()? - base;

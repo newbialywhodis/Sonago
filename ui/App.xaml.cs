@@ -1,7 +1,7 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
-namespace Hearlier;
+namespace Sonago;
 
 public sealed partial class App : Application
 {

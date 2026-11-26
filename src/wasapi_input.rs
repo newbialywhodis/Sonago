@@ -133,7 +133,7 @@ impl WasapiInput {
         let stats = input.stats.clone();
         let clock = input.clock;
         let thread = thread::Builder::new()
-            .name("hearlier-wasapi".into())
+            .name("sonago-wasapi".into())
             .spawn(move || {
                 let stats = input.stats.clone();
                 let result = capture(input, &worker, &notify);

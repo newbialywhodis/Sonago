@@ -7,7 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use hearlier_core::{
+use sonago_core::{
     Result,
     engine::{Config, Engine, Format, Notice},
     wasapi_input::{Source, WasapiInput},

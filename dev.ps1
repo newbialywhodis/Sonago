@@ -33,10 +33,10 @@ try {
     }
 
     $output = Join-Path $PSScriptRoot "target/winui/$Runtime/$Configuration/app"
-    & $dotnet build ui/Hearlier.csproj -c $Configuration -r $Runtime -o "$output/" -p:RestoreLockedMode=true
+    & $dotnet build ui/Sonago.csproj -c $Configuration -r $Runtime -o "$output/" -p:RestoreLockedMode=true
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     if (-not $NoRun) {
-        Start-Process -FilePath (Join-Path $output 'hearlier.exe')
+        Start-Process -FilePath (Join-Path $output 'sonago.exe')
     }
 } finally {
     $env:Path = $originalPath

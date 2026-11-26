@@ -7,7 +7,7 @@ using Windows.Foundation;
 using Windows.Graphics;
 using Windows.UI.ViewManagement;
 
-namespace Hearlier;
+namespace Sonago;
 
 public sealed partial class TrayMenuWindow : Window
 {

@@ -26,7 +26,7 @@ thread_local! {
 fn with_app<T>(action: impl FnOnce(&mut App) -> Result<T>) -> Result<T> {
     APP.with(|app| {
         let mut app = app.try_borrow_mut()?;
-        action(app.as_mut().ok_or("hearlier is not running.")?)
+        action(app.as_mut().ok_or("Sonago is not running.")?)
     })
 }
 
@@ -91,7 +91,7 @@ fn start(wake: Wake) -> Result<Option<bool>> {
         if app.settings.autostart
             && let Err(err) = tray::set_autostart(true)
         {
-            app.show_error(&format!("Could not register hearlier at startup. {err}"));
+            app.show_error(&format!("Could not register Sonago at startup. {err}"));
         }
     }
     app.refresh();
@@ -290,7 +290,7 @@ impl App {
 
     fn show_error(&mut self, message: &str) {
         self.export_issue = Some(message.to_owned());
-        self.notify("hearlier", message, None);
+        self.notify("Sonago", message, None);
         self.refresh();
     }
 
@@ -369,7 +369,7 @@ impl App {
                 self.export_issue = None;
                 let file = path.file_name().unwrap_or_default().to_string_lossy();
                 let message = format!("{file}\nClick to open");
-                self.notify("hearlier · Clip saved", &message, Some(path));
+                self.notify("Sonago · Clip saved", &message, Some(path));
             }
         }
         self.refresh();

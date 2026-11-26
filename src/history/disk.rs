@@ -34,7 +34,7 @@ impl Spool {
         let (jobs, queue) = mpsc::channel();
         let (reply, completed) = mpsc::sync_channel(1);
         let worker = thread::Builder::new()
-            .name("hearlier-history-disk".into())
+            .name("sonago-history-disk".into())
             .spawn(move || {
                 for job in queue {
                     match job {

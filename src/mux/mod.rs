@@ -21,7 +21,7 @@ pub fn save(snapshot: &Snapshot, directory: &Path, format: Format) -> Result<Pat
     let id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
     match format {
         Format::Matroska => {
-            let destination = directory.join(format!("hearlier-{id}.mka"));
+            let destination = directory.join(format!("sonago-{id}.mka"));
             let mut temporary = tempfile::NamedTempFile::new_in(directory)?;
             let mut writer = BufWriter::new(temporary.as_file_mut());
             matroska::write(snapshot, &mut writer)?;
@@ -33,9 +33,9 @@ pub fn save(snapshot: &Snapshot, directory: &Path, format: Format) -> Result<Pat
         }
         Format::OggOpus => {
             let temporary = tempfile::Builder::new()
-                .prefix(".hearlier-")
+                .prefix(".sonago-")
                 .tempdir_in(directory)?;
-            let destination = directory.join(format!("hearlier-{id}"));
+            let destination = directory.join(format!("sonago-{id}"));
             let [system, mic] =
                 ["system.opus", "microphone.opus"].map(|name| temporary.path().join(name));
             let files = [fs::File::create(system)?, fs::File::create(mic)?];

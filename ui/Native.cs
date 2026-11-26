@@ -1,11 +1,11 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace Hearlier;
+namespace Sonago;
 
 internal static class Native
 {
-    private const string Library = "hearlier_core.dll";
+    private const string Library = "sonago_core.dll";
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
@@ -14,16 +14,16 @@ internal static class Native
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate void Wake();
 
-    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "hearlier_start")]
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sonago_start")]
     private static extern nint StartCore(Wake wake);
 
-    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "hearlier_invoke")]
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sonago_invoke")]
     private static extern nint InvokeCore([MarshalAs(UnmanagedType.LPUTF8Str)] string command);
 
-    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "hearlier_free")]
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sonago_free")]
     private static extern void Free(nint reply);
 
-    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "hearlier_stop")]
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sonago_stop")]
     internal static extern void Stop();
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
@@ -118,7 +118,7 @@ internal static class Native
     internal static void ShowStartupError(string message)
     {
         const uint ErrorIcon = 0x10;
-        MessageBoxW(0, message, "hearlier", ErrorIcon);
+        MessageBoxW(0, message, "Sonago", ErrorIcon);
     }
 
     internal static bool? Start(Wake wake) => Decode<bool?>(StartCore(wake));
@@ -129,7 +129,7 @@ internal static class Native
     {
         try
         {
-            var text = Marshal.PtrToStringUTF8(pointer) ?? throw new InvalidOperationException("hearlier returned no response.");
+            var text = Marshal.PtrToStringUTF8(pointer) ?? throw new InvalidOperationException("Sonago returned no response.");
             var reply = JsonSerializer.Deserialize<Reply>(text, Json)!;
             if (reply.Error is not null)
             {

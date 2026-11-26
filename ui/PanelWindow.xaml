@@ -1,8 +1,8 @@
 <Window
-    x:Class="Hearlier.PanelWindow"
+    x:Class="Sonago.PanelWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="hearlier">
+    Title="Sonago">
     <Window.SystemBackdrop>
         <DesktopAcrylicBackdrop />
     </Window.SystemBackdrop>
@@ -94,7 +94,7 @@
             <StackPanel Grid.Row="2" Margin="16,0,16,14" Spacing="8">
                 <InfoBar x:Name="SettingsNotice" IsClosable="False" Severity="Warning" />
                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <Button x:Name="QuitButton" Content="Quit hearlier" Click="Quit" />
+                    <Button x:Name="QuitButton" Content="Quit Sonago" Click="Quit" />
                     <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Click="Cancel" />
                     <Button x:Name="ApplyButton" Grid.Column="2" Content="Apply" Click="Apply" Style="{StaticResource AccentButtonStyle}" />
                 </Grid>

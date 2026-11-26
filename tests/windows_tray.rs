@@ -7,7 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use hearlier_core::Result;
+use sonago_core::Result;
 use windows::{
     Win32::{
         Foundation::{ERROR_HOTKEY_ALREADY_REGISTERED, LPARAM, WPARAM},
@@ -26,17 +26,17 @@ use windows::{
 #[test]
 #[ignore = "requires an interactive Windows desktop, a free Ctrl+Alt+F9, and ffprobe"]
 fn tray_hotkey_message_exports_mix_and_two_stems() -> Result<()> {
-    let class = w!("HearlierTrayWindow");
+    let class = w!("SonagoTrayWindow");
     assert!(
         unsafe { FindWindowW(class, None) }.is_err(),
-        "close the running hearlier instance"
+        "close the running Sonago instance"
     );
     let register = || unsafe { RegisterHotKey(None, 1, MOD_CONTROL | MOD_ALT, u32::from(VK_F9.0)) };
     register()?;
     unsafe { UnregisterHotKey(None, 1)? };
 
     let output = tempfile::tempdir()?;
-    let settings = output.path().join("hearlier");
+    let settings = output.path().join("Sonago");
     std::fs::create_dir(&settings)?;
     std::fs::write(
         settings.join("settings.json"),
@@ -54,7 +54,7 @@ fn tray_hotkey_message_exports_mix_and_two_stems() -> Result<()> {
             "notifications": false
         }))?,
     )?;
-    let executable = std::env::var_os("HEARLIER_WINUI_EXE").map_or_else(
+    let executable = std::env::var_os("SONAGO_WINUI_EXE").map_or_else(
         || {
             let runtime = if cfg!(target_arch = "aarch64") {
                 "win-arm64"
@@ -64,13 +64,13 @@ fn tray_hotkey_message_exports_mix_and_two_stems() -> Result<()> {
             Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("target/winui")
                 .join(runtime)
-                .join("Release/app/hearlier.exe")
+                .join("Release/app/sonago.exe")
         },
         PathBuf::from,
     );
     assert!(
         executable.is_file(),
-        "Build the WinUI Release app or set HEARLIER_WINUI_EXE"
+        "Build the WinUI Release app or set SONAGO_WINUI_EXE"
     );
     let mut process = AppProcess(
         Command::new(&executable)
@@ -100,7 +100,7 @@ fn tray_hotkey_message_exports_mix_and_two_stems() -> Result<()> {
     let error = match register() {
         Ok(()) => {
             unsafe { UnregisterHotKey(None, 1)? };
-            return Err("hearlier did not register the expected shortcut".into());
+            return Err("Sonago did not register the expected shortcut".into());
         }
         Err(error) => error,
     };

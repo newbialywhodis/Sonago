@@ -6,7 +6,7 @@ use crate::{CHANNELS, FRAME, FRAMES_PER_SECOND, Result, codec::opus_head, histor
 
 pub fn write<W: Write>(snapshot: &Snapshot, outputs: &mut [W; 2]) -> Result<()> {
     let mut writers = outputs.each_mut().map(PacketWriter::new);
-    let vendor = b"hearlier";
+    let vendor = b"sonago";
     let mut tags = b"OpusTags".to_vec();
     tags.extend_from_slice(&(vendor.len() as u32).to_le_bytes());
     tags.extend_from_slice(vendor);

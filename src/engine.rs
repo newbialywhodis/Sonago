@@ -122,7 +122,7 @@ impl Engine {
         let export_notice = notify.clone();
         let export_stats = stats.clone();
         let exporter = thread::Builder::new()
-            .name("hearlier-export".into())
+            .name("sonago-export".into())
             .spawn(move || {
                 for (snapshot, request) in exports {
                     let result = mux::save(&snapshot, &request.output, request.format);
@@ -133,7 +133,7 @@ impl Engine {
 
         let worker_stats = stats.clone();
         let worker = thread::Builder::new()
-            .name("hearlier-encode".into())
+            .name("sonago-encode".into())
             .spawn(move || {
                 worker_stats.recording.store(true, Relaxed);
                 let mut recorder = Recorder {
@@ -388,7 +388,7 @@ fn report_save(notify: &Notification, result: Result<PathBuf>) {
         Err(err) => {
             let message = match err.downcast_ref::<std::io::Error>().map(std::io::Error::kind) {
                 Some(std::io::ErrorKind::StorageFull) => "The recordings drive is full. Free some space or choose a different folder.".into(),
-                Some(std::io::ErrorKind::PermissionDenied) => "hearlier cannot write to the recordings folder. Choose a writable folder in Settings.".into(),
+                Some(std::io::ErrorKind::PermissionDenied) => "Sonago cannot write to the recordings folder. Choose a writable folder in Settings.".into(),
                 _ => err.to_string(),
             };
             notify(Notice::SaveFailed(message));

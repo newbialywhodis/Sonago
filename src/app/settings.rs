@@ -44,18 +44,22 @@ impl Settings {
         let directory = std::env::var_os("LOCALAPPDATA")
             .ok_or("Windows did not provide a local app data folder.")?;
         let root = PathBuf::from(directory);
-        let mut directory = root.join("hearlier");
-        let legacy_directory = root.join("Recall Audio");
-        if !directory.join("settings.json").try_exists()?
-            && legacy_directory.join("settings.json").try_exists()?
-        {
-            directory = legacy_directory;
-        }
+        let directory = root.join("Sonago");
         let file = directory.join("settings.json");
-        let (mut settings, first): (Self, bool) = match fs::read(&file) {
+        let mut source = file.clone();
+        if !file.try_exists()? {
+            for legacy in ["hearlier", "Recall Audio"] {
+                let candidate = root.join(legacy).join("settings.json");
+                if candidate.try_exists()? {
+                    source = candidate;
+                    break;
+                }
+            }
+        }
+        let (mut settings, first): (Self, bool) = match fs::read(&source) {
             Ok(bytes) => (
                 serde_json::from_slice(&bytes)
-                    .map_err(|err| format!("Could not read {}: {err}", file.display()))?,
+                    .map_err(|err| format!("Could not read {}: {err}", source.display()))?,
                 false,
             ),
             Err(err) if err.kind() == ErrorKind::NotFound => (

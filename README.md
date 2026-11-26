@@ -1,11 +1,9 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/hearlier-banner-monochrome.svg">
-  <img src="assets/hearlier-banner-light.svg" alt="hearlier — retrospective audio recording for Windows">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/sonago-banner-dark.png">
+  <img src="assets/sonago-banner-light.png" alt="Sonago — retrospective audio recording for Windows">
 </picture>
 
-hearlier is a native Windows 11 app that lets you save audio after it happens. It runs in the system tray and keeps a rolling history of system audio and microphone input, so you can save the last few minutes whenever you need them.
-
-![hearlier quick controls and settings](assets/hearlier-preview.png)
+Sonago is a native Windows 11 app that lets you save audio after it happens. It runs in the system tray and keeps a rolling history of system audio and microphone input, so you can save the last few minutes whenever you need them.
 
 ## Features
 
@@ -19,9 +17,11 @@ Audio history is stored locally and cleared when the app exits.
 
 ## Download
 
-On Windows 11, open the [latest release](https://github.com/newbialywhodis/hearlier/releases/latest) and choose the `win-x64-setup.exe` or `win-arm64-setup.exe` asset for your PC if available. Run Setup, then open hearlier from the Start menu. Setup includes the Microsoft Visual C++ Redistributable and may ask for administrator approval if it needs to install or update it.
+On Windows 11, open the [latest release](https://github.com/newbialywhodis/hearlier/releases/latest) and download the installer ending in `win-x64-setup.exe` or `win-arm64-setup.exe` for your PC. After installation, open Sonago from the Start menu. Setup includes the Microsoft Visual C++ Redistributable and may ask for administrator approval if it needs to install or update it.
 
-For a portable copy, download the matching ZIP, extract the whole archive, and run `hearlier.exe` from the extracted folder. The ZIP bundles .NET and the Windows App SDK and requires the [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/) for your architecture.
+For a portable copy, download the matching ZIP, extract the whole archive, and run `sonago.exe` from the extracted folder. The ZIP bundles .NET and the Windows App SDK and requires the [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/) for your architecture.
+
+Releases published before the rename use the Hearlier name and include `hearlier.exe`.
 
 ## Usage
 
@@ -49,7 +49,7 @@ Build a release:
 .\dev.ps1 -Configuration Release -NoRun
 ```
 
-The build is available in `target/winui/win-x64/Release/app` (or `target/winui/win-arm64/Release/app` on ARM64). Run `hearlier.exe` from that directory and keep the accompanying files together.
+The build is available in `target/winui/win-x64/Release/app` (or `target/winui/win-arm64/Release/app` on ARM64). Run `sonago.exe` from that directory and keep the accompanying files together.
 
 ## Publishing a release
 
@@ -64,4 +64,4 @@ GitHub Actions runs the Rust tests and publishes an Inno Setup installer and a p
 
 ## License
 
-hearlier is licensed under the [MIT License](LICENSE). Third-party license notices are included in the `licenses/` directory of each release.
+Sonago is licensed under the [MIT License](LICENSE). Third-party license notices are included in the `licenses/` directory of each release.

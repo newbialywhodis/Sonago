@@ -118,7 +118,7 @@ fn reply(result: Result<Value>) -> *mut c_char {
 // The host calls start, invoke and stop only on its WinUI dispatcher and retains the
 // wake callback until stop has joined the native workers. The callback only queues work.
 #[unsafe(no_mangle)]
-extern "C" fn hearlier_start(wake: Option<Wake>) -> *mut c_char {
+extern "C" fn sonago_start(wake: Option<Wake>) -> *mut c_char {
     reply((|| {
         let wake = wake.ok_or("A dispatcher wake callback is required.")?;
         value(start(wake)?)
@@ -126,10 +126,10 @@ extern "C" fn hearlier_start(wake: Option<Wake>) -> *mut c_char {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn hearlier_invoke(command: *const c_char) -> *mut c_char {
+extern "C" fn sonago_invoke(command: *const c_char) -> *mut c_char {
     reply((|| {
         if command.is_null() {
-            return Err("A hearlier command is required.".into());
+            return Err("A Sonago command is required.".into());
         }
         // The marshaler provides a NUL-terminated UTF-8 command valid for this call.
         let command = unsafe { CStr::from_ptr(command) };
@@ -139,7 +139,7 @@ extern "C" fn hearlier_invoke(command: *const c_char) -> *mut c_char {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn hearlier_free(reply: *mut c_char) {
+extern "C" fn sonago_free(reply: *mut c_char) {
     if !reply.is_null() {
         // Each response is freed by the host exactly once with the allocating runtime.
         drop(unsafe { CString::from_raw(reply) });
@@ -147,7 +147,7 @@ extern "C" fn hearlier_free(reply: *mut c_char) {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn hearlier_stop() {
+extern "C" fn sonago_stop() {
     stop();
 }
 
@@ -341,7 +341,7 @@ impl App {
     fn warning(&self, disk_degraded: bool) -> Option<String> {
         self.engine_issue
             .as_ref()
-            .map(|_| "Audio capture stopped. Restart hearlier.".to_owned())
+            .map(|_| "Audio capture stopped. Restart Sonago.".to_owned())
             .or_else(|| self.export_issue.clone())
             .or_else(|| {
                 disk_degraded.then(|| {

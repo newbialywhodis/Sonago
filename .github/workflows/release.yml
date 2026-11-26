@@ -46,7 +46,7 @@ jobs:
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
           $version = $env:GITHUB_REF_NAME.Substring(1)
-          $dist = Join-Path $env:RUNNER_TEMP 'hearlier-release'
+          $dist = Join-Path $env:RUNNER_TEMP 'sonago-release'
           $cargo = cargo metadata --locked --format-version 1 --filter-platform x86_64-pc-windows-msvc | ConvertFrom-Json
 
           function Copy-Notices($source, $destination) {
@@ -59,12 +59,12 @@ jobs:
           }
 
           foreach ($runtime in 'win-x64', 'win-arm64') {
-              $name = "hearlier-$env:GITHUB_REF_NAME-$runtime"
+              $name = "sonago-$env:GITHUB_REF_NAME-$runtime"
               $output = Join-Path $dist $name
               # The WinUI build output includes the app's PRI and XBF resources.
-              dotnet build ui/Hearlier.csproj -c Release -r $runtime --self-contained `
+              dotnet build ui/Sonago.csproj -c Release -r $runtime --self-contained `
                   -p:RestoreLockedMode=true "-p:Version=$version" -p:DebugType=none -o "$output/"
-              foreach ($file in 'hearlier.exe', 'hearlier.ico', 'hearlier_core.dll', 'hearlier.pri') {
+              foreach ($file in 'sonago.exe', 'sonago.ico', 'sonago_core.dll', 'sonago.pri') {
                   if (!(Test-Path -LiteralPath (Join-Path $output $file) -PathType Leaf)) {
                       throw "Missing $file in $runtime build"
                   }
@@ -104,9 +104,9 @@ jobs:
       - name: Build Inno Setup installers
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          $dist = Join-Path $env:RUNNER_TEMP 'hearlier-release'
+          $dist = Join-Path $env:RUNNER_TEMP 'sonago-release'
           $compilerSetup = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.1-x64.exe'
-          $compilerDir = Join-Path $env:RUNNER_TEMP 'hearlier-inno'
+          $compilerDir = Join-Path $env:RUNNER_TEMP 'sonago-inno'
           $compilerUrl = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe'
           Invoke-WebRequest -Uri $compilerUrl -OutFile $compilerSetup
           $expectedHash = '8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0'
@@ -122,7 +122,7 @@ jobs:
           $iscc = Join-Path $compilerDir 'ISCC.exe'
           $version = $env:GITHUB_REF_NAME.Substring(1)
           foreach ($arch in 'x64', 'arm64') {
-              $name = "hearlier-$env:GITHUB_REF_NAME-win-$arch"
+              $name = "sonago-$env:GITHUB_REF_NAME-win-$arch"
               $appDir = Join-Path $dist $name
               $redistName = "vc_redist.$arch.exe"
               $redist = Join-Path $env:RUNNER_TEMP $redistName
@@ -133,7 +133,7 @@ jobs:
               }
 
               & $iscc "/DAppVersion=$version" "/DAppArch=$arch" "/DAppDir=$appDir" "/DRedistPath=$redist" `
-                  "/O$dist" installer/hearlier.iss
+                  "/O$dist" installer/sonago.iss
               if (!(Test-Path -LiteralPath (Join-Path $dist "$name-setup.exe") -PathType Leaf)) {
                   throw "Missing Inno Setup installer for $arch."
               }
@@ -143,9 +143,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $dist = Join-Path $env:RUNNER_TEMP 'hearlier-release'
+          $dist = Join-Path $env:RUNNER_TEMP 'sonago-release'
           $assets = foreach ($arch in 'x64', 'arm64') {
-              $name = "hearlier-$env:GITHUB_REF_NAME-win-$arch"
+              $name = "sonago-$env:GITHUB_REF_NAME-win-$arch"
               Join-Path $dist "$name-setup.exe"
               Join-Path $dist "$name.zip"
           }

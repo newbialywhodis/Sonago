@@ -45,7 +45,7 @@ pub struct Tray {
 impl Tray {
     pub fn new() -> Result<Self> {
         let instance = HINSTANCE(unsafe { GetModuleHandleW(None)? }.0);
-        let class = w!("HearlierTrayWindow");
+        let class = w!("SonagoTrayWindow");
         let wc = WNDCLASSW {
             lpfnWndProc: Some(window_proc),
             hInstance: instance,
@@ -59,7 +59,7 @@ impl Tray {
             CreateWindowExW(
                 WINDOW_EX_STYLE(0),
                 class,
-                w!("hearlier"),
+                w!("Sonago"),
                 WS_OVERLAPPED,
                 0,
                 0,
@@ -85,7 +85,7 @@ impl Tray {
         if image.is_invalid() {
             icon.hIcon = unsafe { LoadIconW(None, IDI_APPLICATION) }.unwrap_or_default();
         }
-        copy_text(&mut icon.szTip, "hearlier");
+        copy_text(&mut icon.szTip, "Sonago");
         let tray = Self { hwnd, icon, image };
         tray.restore()?;
         Ok(tray)
@@ -93,7 +93,7 @@ impl Tray {
 
     pub fn restore(&self) -> Result<()> {
         if !unsafe { Shell_NotifyIconW(NIM_ADD, &self.icon) }.as_bool() {
-            return Err("Windows could not add hearlier to the system tray.".into());
+            return Err("Windows could not add Sonago to the system tray.".into());
         }
         let mut data = self.icon;
         data.Anonymous.uVersion = NOTIFYICON_VERSION_4;
@@ -121,7 +121,7 @@ impl Tray {
     }
 
     pub fn tooltip(&mut self, state: &str) {
-        let text = format!("hearlier · {state}");
+        let text = format!("Sonago · {state}");
         let previous = self.icon.szTip;
         copy_text(&mut self.icon.szTip, &text);
         if previous != self.icon.szTip {
@@ -308,7 +308,7 @@ fn outside_click(tray: HWND, lparam: LPARAM) -> bool {
 }
 
 fn app_icon() -> Result<HICON> {
-    let path = std::env::current_exe()?.with_file_name("hearlier.ico");
+    let path = std::env::current_exe()?.with_file_name("sonago.ico");
     let path: Vec<u16> = path.as_os_str().encode_wide().chain([0]).collect();
     let image = unsafe {
         LoadImageW(

@@ -10,7 +10,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.Storage.Pickers;
 using VirtualKey = Windows.System.VirtualKey;
 
-namespace Hearlier;
+namespace Sonago;
 
 public sealed partial class PanelWindow : Window
 {
@@ -39,7 +39,7 @@ public sealed partial class PanelWindow : Window
         this.shutdown = shutdown;
         InitializeComponent();
         hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "hearlier.ico"));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "sonago.ico"));
         var presenter = OverlappedPresenter.CreateForContextMenu();
         AppWindow.SetPresenter(presenter);
         Native.DisableWindowTransitions(hwnd);
@@ -114,7 +114,7 @@ public sealed partial class PanelWindow : Window
         presenter.IsAlwaysOnTop = !setup;
         QuickPanel.Visibility = setup ? Visibility.Collapsed : Visibility.Visible;
         Root.IsHitTestVisible = true;
-        Title = setup ? "Set up hearlier" : "hearlier";
+        Title = setup ? "Set up Sonago" : "Sonago";
         shown = true;
         Refresh(resize: false);
         Resize(newAnchor, slideIn: newAnchor && !setup && draft is null);
@@ -460,7 +460,7 @@ public sealed partial class PanelWindow : Window
     {
         draft = Native.Call<Preferences>(new { action = "settings" });
         var settings = draft.Settings;
-        SettingsTitle.Text = setup ? "Set up hearlier" : "Settings";
+        SettingsTitle.Text = setup ? "Set up Sonago" : "Settings";
         SetupDescription.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         FormatRow.Visibility = FolderRow.Visibility = General.Visibility = QuitButton.Visibility =
             setup ? Visibility.Collapsed : Visibility.Visible;

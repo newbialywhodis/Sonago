@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <AssemblyName>hearlier</AssemblyName>
-    <RootNamespace>Hearlier</RootNamespace>
-    <ApplicationIcon>..\assets\hearlier.ico</ApplicationIcon>
+    <AssemblyName>sonago</AssemblyName>
+    <Product>Sonago</Product>
+    <RootNamespace>Sonago</RootNamespace>
+    <ApplicationIcon>..\assets\sonago.ico</ApplicationIcon>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
     <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
@@ -32,12 +33,12 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.9457" />
     <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.7.0" />
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.7.0" />
-    <Content Include="$(RustTargetDirectory)\$(RustTarget)\$(RustProfile)\hearlier_core.dll"
-             Link="hearlier_core.dll" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="$(ApplicationIcon)" Link="hearlier.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(RustTargetDirectory)\$(RustTarget)\$(RustProfile)\sonago_core.dll"
+             Link="sonago_core.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(ApplicationIcon)" Link="sonago.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="BuildRustCore" BeforeTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
-    <Error Condition="'$(RustTarget)' == ''" Text="hearlier supports win-x64 and win-arm64." />
+    <Error Condition="'$(RustTarget)' == ''" Text="Sonago supports win-x64 and win-arm64." />
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)\.."
           Command="cargo build --lib --locked --target $(RustTarget) --target-dir &quot;$(RustTargetDirectory)&quot; $(CargoProfileFlag)" />
   </Target>
