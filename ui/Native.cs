@@ -33,13 +33,7 @@ internal static class Native
     internal static extern uint GetDpiForWindow(nint window);
 
     [DllImport("gdi32.dll", ExactSpelling = true)]
-    private static extern nint CreateRoundRectRgn(int left, int top, int right, int bottom, int ellipseWidth, int ellipseHeight);
-
-    [DllImport("gdi32.dll", ExactSpelling = true)]
     private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
-
-    [DllImport("gdi32.dll", ExactSpelling = true)]
-    private static extern int CombineRgn(nint destination, nint first, nint second, int mode);
 
     [DllImport("gdi32.dll", ExactSpelling = true)]
     private static extern bool DeleteObject(nint handle);
@@ -47,25 +41,11 @@ internal static class Native
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern int SetWindowRgn(nint window, nint region, bool redraw);
 
-    internal static void SetPanelRegion(nint window, int width, int height, int offset, int diameter, int visibleHeight)
+    internal static void ClipPanel(nint window, int width, int top, int bottom)
     {
-        var region = CreateRoundRectRgn(0, offset, width + 1, offset + height + 1, diameter, diameter);
+        var region = CreateRectRgn(0, top, width, bottom);
         if (region == 0)
             return;
-        if (offset + height > visibleHeight)
-        {
-            // Keep the moving corners, with a straight cut where the taskbar occludes them.
-            const int intersect = 1; // RGN_AND
-            var clip = CreateRectRgn(0, 0, width, visibleHeight);
-            bool clipped = clip != 0 && CombineRgn(region, region, clip, intersect) != 0;
-            if (clip != 0)
-                DeleteObject(clip);
-            if (!clipped)
-            {
-                DeleteObject(region);
-                return;
-            }
-        }
         // On success Windows takes ownership of the region.
         if (SetWindowRgn(window, region, true) == 0)
             DeleteObject(region);
@@ -86,19 +66,28 @@ internal static class Native
     [DllImport("dwmapi.dll", ExactSpelling = true)]
     private static extern int DwmSetWindowAttribute(nint window, uint attribute, in int value, uint size);
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FrameMargins
+    {
+        public int Left, Right, Top, Bottom;
+    }
+
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    private static extern int DwmExtendFrameIntoClientArea(nint window, in FrameMargins margins);
+
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern int GetWindowLongW(nint window, int index);
 
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern int SetWindowLongW(nint window, int index, int value);
 
-    internal static void DisablePanelFrame(nint window)
+    internal static void ConfigurePanelFrame(nint window)
     {
         const int windowStyle = -16;
         const int popup = unchecked((int)0x80000000);
         SetWindowLongW(window, windowStyle, GetWindowLongW(window, windowStyle) | popup);
         const uint cornerPreference = 33;
-        const int doNotRound = 1; // The animated region supplies the corners.
+        const int doNotRound = 1; // WinUI draws the corners of the sliding surface.
         _ = DwmSetWindowAttribute(window, cornerPreference, doNotRound, sizeof(int));
         const uint nonClientRenderingPolicy = 2;
         const int disabled = 1;
@@ -106,6 +95,9 @@ internal static class Native
         const uint borderColor = 34;
         const int noBorder = -2; // DWMWA_COLOR_NONE
         _ = DwmSetWindowAttribute(window, borderColor, noBorder, sizeof(int));
+        // Let WinUI's transparent pixels blend with the desktop across the whole client area.
+        var margins = new FrameMargins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
+        _ = DwmExtendFrameIntoClientArea(window, in margins);
     }
 
     internal static void DisableWindowTransitions(nint window)

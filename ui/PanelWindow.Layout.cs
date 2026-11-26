@@ -102,8 +102,7 @@ public sealed partial class PanelWindow
     {
         offset = pixels;
         PanelOffset.Y = pixels / panelScale;
-        int diameter = (int)Math.Round(2 * QuickPanel.CornerRadius.TopLeft * panelScale);
-        Native.SetPanelRegion(hwnd, restingBounds.Width, restingBounds.Height, pixels, diameter, travel);
+        Native.ClipPanel(hwnd, restingBounds.Width, pixels, Math.Min(pixels + restingBounds.Height, travel));
     }
 
     private void FinishSlide()

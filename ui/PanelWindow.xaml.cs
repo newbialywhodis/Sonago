@@ -109,7 +109,8 @@ public sealed partial class PanelWindow : Window
         if (!setup && presenter.HasBorder)
         {
             presenter.SetBorderAndTitleBar(false, false);
-            Native.DisablePanelFrame(hwnd);
+            SystemBackdrop = new TransparentBackdrop();
+            Native.ConfigurePanelFrame(hwnd);
         }
         presenter.IsAlwaysOnTop = !setup;
         QuickPanel.Visibility = setup ? Visibility.Collapsed : Visibility.Visible;
@@ -142,6 +143,9 @@ public sealed partial class PanelWindow : Window
             }
         });
     }
+
+    // Installing a backdrop makes the WinUI root transparent. QuickPanel supplies the acrylic.
+    private sealed class TransparentBackdrop : SystemBackdrop { }
 
     private void Hide()
     {
