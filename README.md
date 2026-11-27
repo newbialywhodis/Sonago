@@ -18,7 +18,7 @@ Audio history is stored locally and cleared when the app exits.
 
 ## Download
 
-On Windows 11, open the [latest release](https://github.com/newbialywhodis/hearlier/releases/latest) and download the installer ending in `win-x64-setup.exe` or `win-arm64-setup.exe` for your PC. After installation, open Sonago from the Start menu. Setup includes the Microsoft Visual C++ Redistributable and may ask for administrator approval if it needs to install or update it.
+On Windows 11, open the [latest release](https://github.com/newbialywhodis/sonago/releases/latest) and download the installer ending in `win-x64-setup.exe` or `win-arm64-setup.exe` for your PC. After installation, open Sonago from the Start menu. Setup includes the Microsoft Visual C++ Redistributable and may ask for administrator approval if it needs to install or update it.
 
 For a portable copy, download the matching ZIP, extract the whole archive, and run `sonago.exe` from the extracted folder. The ZIP bundles .NET and the Windows App SDK and requires the [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/) for your architecture.
 
