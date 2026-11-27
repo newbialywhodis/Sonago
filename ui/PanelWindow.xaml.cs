@@ -477,10 +477,13 @@ public sealed partial class PanelWindow : Window
         Retention.Value = settings.Retention;
         Minutes.Value = settings.Minutes;
         Hotkey.Text = settings.Hotkey;
+        DoubleTap.SelectedItem = DoubleTap.Items.OfType<ComboBoxItem>()
+            .FirstOrDefault(item => Equals(item.Tag, settings.DoubleTap));
         Folder.Text = settings.Output;
         Format.SelectedIndex = settings.Format == "ogg_opus" ? 1 : 0;
         Autostart.IsChecked = settings.Autostart;
         Notifications.IsChecked = settings.Notifications;
+        Transcribe.IsChecked = settings.Transcribe;
         if (setup)
             SettingsPanel.Visibility = Visibility.Visible;
         Gear.IsChecked = true;
@@ -552,8 +555,10 @@ public sealed partial class PanelWindow : Window
                 Output = Folder.Text == original.Output ? original.Output : Folder.Text.Trim(),
                 Format = Format.SelectedIndex == 1 ? "ogg_opus" : "matroska",
                 Hotkey = Hotkey.Text.Trim(),
+                DoubleTap = (DoubleTap.SelectedItem as ComboBoxItem)?.Tag as string ?? original.DoubleTap,
                 Autostart = Autostart.IsChecked == true,
-                Notifications = Notifications.IsChecked == true
+                Notifications = Notifications.IsChecked == true,
+                Transcribe = Transcribe.IsChecked == true
             };
             Native.Run(new { action = "apply", settings });
         }

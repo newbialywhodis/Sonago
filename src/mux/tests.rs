@@ -5,6 +5,58 @@ use crate::{CHANNELS, FRAME, FRAMES_PER_SECOND, RATE, Result, codec::Encoders, h
 use super::{Format, save};
 
 #[test]
+#[ignore = "requires a two-stem speech/music fixture and the built transcription worker"]
+fn queued_transcripts_match_for_both_exports() -> Result<()> {
+    use std::{fs, io::Write, process::Stdio};
+    // Interleaved 48 kHz s16le: left = system, right = microphone.
+    let bytes = fs::read(std::env::var("SONAGO_TEST_STEMS")?)?;
+    let executable = std::env::var("SONAGO_TEST_TRANSCRIBER")?;
+    let frames = bytes.len() / (FRAME * 4);
+    let mut codec = Encoders::new()?;
+    let (mut history, _) = History::new(frames as u64 + 1, frames as u64 + 1)?;
+    let mut pcm = [[0; FRAME * 2]; 2];
+    for frame in bytes.as_chunks::<{ FRAME * 4 }>().0 {
+        for (i, sample) in frame.as_chunks::<4>().0.iter().enumerate() {
+            pcm[0][2 * i..2 * i + 2].fill(i16::from_le_bytes([sample[0], sample[1]]));
+            pcm[1][i] = i16::from_le_bytes([sample[2], sample[3]]);
+        }
+        history.push(codec.encode(&pcm)?)?;
+    }
+    let snapshot = history.snapshot(frames as u64 - 1, frames as u64 - 3, codec.delays)?;
+    let temp = tempfile::tempdir()?;
+    let mka = save(&snapshot, temp.path(), Format::Matroska)?;
+    let mut worker = Command::new(executable)
+        .arg("--queue")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()?;
+    let mut queue = worker.stdin.take().unwrap();
+    writeln!(queue, "{}", mka.display())?;
+    // Publish another export while the first transcript is pending.
+    let ogg = save(&snapshot, temp.path(), Format::OggOpus)?;
+    writeln!(queue, "{}", temp.path().join("missing.mka").display())?;
+    writeln!(queue, "{}", ogg.display())?;
+    drop(queue); // The tray can exit before either transcript completes.
+    let result = worker.wait_with_output()?;
+    assert!(result.status.success());
+    let replies = String::from_utf8(result.stdout)?
+        .lines()
+        .map(serde_json::from_str::<Option<String>>)
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    assert_eq!(replies.len(), 3);
+    assert!(
+        replies[0].is_none() && replies[1].is_some() && replies[2].is_none(),
+        "{replies:?}"
+    );
+    let text = fs::read_to_string(mka.with_extension("txt"))?;
+    assert_eq!(text, fs::read_to_string(ogg.join("transcript.txt"))?);
+    for label in ["Microphone:", "Speaker ", "Music"] {
+        assert!(text.contains(label), "{text}");
+    }
+    Ok(())
+}
+
+#[test]
 #[ignore = "requires FFmpeg and ffprobe on PATH"]
 fn remuxed_audio_matches_across_containers() -> Result<()> {
     let temp = tempfile::tempdir()?;

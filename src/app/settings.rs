@@ -7,6 +7,7 @@ use std::{
 use crate::{
     Result,
     engine::{Format, MAX_HISTORY_MINUTES},
+    tray::DoubleTapKey,
     wasapi_input::Source,
 };
 use serde::{Deserialize, Serialize};
@@ -19,8 +20,16 @@ pub(super) struct Settings {
     pub output: PathBuf,
     pub format: ExportFormat,
     pub hotkey: String,
+    #[serde(default)]
+    pub double_tap: DoubleTapKey,
     pub autostart: bool,
     pub notifications: bool,
+    #[serde(default = "transcribe_by_default")]
+    pub transcribe: bool,
+}
+
+fn transcribe_by_default() -> bool {
+    true
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -79,8 +88,10 @@ impl Settings {
                     output: directory.join("Recordings"),
                     format: ExportFormat::Matroska,
                     hotkey: "Ctrl+Alt+F9".into(),
+                    double_tap: DoubleTapKey::default(),
                     autostart: false,
                     notifications: true,
+                    transcribe: true,
                 },
                 true,
             ),
@@ -133,6 +144,36 @@ impl Settings {
         temp.write_all(b"\n")?;
         temp.as_file().sync_all()?;
         temp.persist(path)?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn double_tap_defaults_to_right_ctrl_for_existing_settings() -> Result<()> {
+        let mut stored = serde_json::json!({
+            "sources": [
+                {"enabled": true, "endpoint": null},
+                {"enabled": false, "endpoint": null}
+            ],
+            "retention": 180,
+            "minutes": 5,
+            "output": "C:/Recordings",
+            "format": "matroska",
+            "hotkey": "Ctrl+Alt+F9",
+            "autostart": false,
+            "notifications": true
+        });
+        let settings: Settings = serde_json::from_value(stored.clone())?;
+        assert_eq!(settings.double_tap, DoubleTapKey::RightCtrl);
+
+        stored["double_tap"] = "off".into();
+        let settings: Settings = serde_json::from_value(stored)?;
+        assert_eq!(settings.double_tap, DoubleTapKey::Off);
+        assert_eq!(serde_json::to_value(settings)?["double_tap"], "off");
         Ok(())
     }
 }

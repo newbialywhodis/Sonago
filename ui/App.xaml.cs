@@ -12,6 +12,7 @@ public sealed partial class App : Application
     private int pumpQueued;
     private volatile bool stopping;
     private bool started;
+    private readonly Transcripts transcripts = new();
 
     public App()
     {
@@ -65,7 +66,17 @@ public sealed partial class App : Application
         {
             return;
         }
-        foreach (string action in Native.Call<string[]>(new { action = "drain" }))
+        var events = Native.Call<Events>(new { action = "drain" });
+        foreach (string clip in events.Clips)
+            transcripts.Enqueue(clip, (path, error) =>
+            {
+                if (!stopping)
+                {
+                    Native.Run(new { action = "transcript_result", clip = path, error });
+                    panel?.Refresh();
+                }
+            });
+        foreach (string action in events.Actions)
         {
             switch (action)
             {
@@ -95,6 +106,7 @@ public sealed partial class App : Application
     private void Shutdown()
     {
         stopping = true;
+        transcripts.Close();
         panel?.CloseForExit();
         if (started)
         {

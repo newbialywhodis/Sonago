@@ -141,8 +141,9 @@ internal static class Native
 internal sealed record Snapshot(string? Warning, string? Issue, bool SystemOn, bool MicOn,
     bool CanSave, string SaveLabel);
 internal sealed record Source(bool Enabled, string? Endpoint);
+internal sealed record Events(string[] Actions, string[] Clips);
 internal sealed record Settings(Source[] Sources, int Retention, int Minutes, string Output,
-    string Format, string Hotkey, bool Autostart, bool Notifications);
+    string Format, string Hotkey, string DoubleTap, bool Autostart, bool Notifications, bool Transcribe);
 internal sealed record DeviceChoice(string Label, string? Endpoint, bool Selected);
 internal sealed record Preferences(Settings Settings, DeviceChoice[][] Devices, string? Issue);
 internal sealed record SaveLength(int Minutes, string Label, bool IsDefault);

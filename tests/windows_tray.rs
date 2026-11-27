@@ -38,6 +38,17 @@ fn tray_hotkey_message_exports_mix_and_two_stems() -> Result<()> {
     let output = tempfile::tempdir()?;
     let settings = output.path().join("Sonago");
     std::fs::create_dir(&settings)?;
+    let models = std::env::var_os("SONAGO_TEST_MODELS");
+    if let Some(models) = &models {
+        let cache = settings.join("models/v1");
+        std::fs::create_dir_all(&cache)?;
+        for entry in std::fs::read_dir(models)? {
+            let entry = entry?;
+            if entry.file_type()?.is_file() && entry.file_name() != "worker.lock" {
+                std::fs::hard_link(entry.path(), cache.join(entry.file_name()))?;
+            }
+        }
+    }
     std::fs::write(
         settings.join("settings.json"),
         serde_json::to_vec(&serde_json::json!({
@@ -51,7 +62,8 @@ fn tray_hotkey_message_exports_mix_and_two_stems() -> Result<()> {
             "format": "matroska",
             "hotkey": "Ctrl+Alt+F9",
             "autostart": false,
-            "notifications": false
+            "notifications": false,
+            "transcribe": models.is_some()
         }))?,
     )?;
     let executable = std::env::var_os("SONAGO_WINUI_EXE").map_or_else(
@@ -120,17 +132,37 @@ fn tray_hotkey_message_exports_mix_and_two_stems() -> Result<()> {
             "-of",
             "csv=p=0",
         ])
-        .arg(clip)
+        .arg(&clip)
         .output()?;
     assert!(probe.status.success());
     assert_eq!(
         String::from_utf8(probe.stdout)?.lines().collect::<Vec<_>>(),
         ["opus,2,1", "opus,2,0", "opus,1,0"]
     );
+    let mut transcripts = Vec::new();
+    if models.is_some() {
+        unsafe { PostMessageW(Some(hwnd), WM_HOTKEY, WPARAM(1), LPARAM(0))? };
+        let second = wait_for(|| {
+            std::fs::read_dir(output.path())
+                .ok()?
+                .flatten()
+                .map(|f| f.path())
+                .find(|p| p != &clip && p.extension().is_some_and(|e| e == "mka"))
+        })
+        .ok_or("Second save did not finish while transcription was pending")?;
+        transcripts.extend([clip.with_extension("txt"), second.with_extension("txt")]);
+    }
     unsafe { PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0))? };
     let status = wait_for(|| process.0.try_wait().ok().flatten())
         .ok_or("Application did not exit normally")?;
     assert!(status.success());
+    let deadline = Instant::now() + Duration::from_secs(120);
+    for transcript in transcripts {
+        while !transcript.is_file() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(100));
+        }
+        assert!(!std::fs::read_to_string(transcript)?.trim().is_empty());
+    }
     Ok(())
 }
 

@@ -1,5 +1,7 @@
 mod desktop;
+mod double_tap;
 pub use desktop::{PlacementTarget, anchor, open_path, placement, set_autostart, single_instance};
+pub use double_tap::{DoubleTapKey, KeyboardInput};
 
 use crate::Result;
 use std::{cell::Cell, mem::size_of, os::windows::ffi::OsStrExt};
@@ -26,6 +28,7 @@ pub enum Event {
     OutsideClick,
     ContextMenu(RECT),
     Save(i32),
+    DoubleTap(DoubleTapKey),
     Open,
     Resume,
     Restore,
@@ -111,13 +114,7 @@ impl Tray {
 
     pub fn watch_outside_clicks(&self, watch: bool) -> bool {
         // A panel shown without activation won't receive a deactivation on the first outside click.
-        let mouse = RAWINPUTDEVICE {
-            usUsagePage: 1, // Generic Desktop
-            usUsage: 2,     // Mouse
-            dwFlags: if watch { RIDEV_INPUTSINK } else { RIDEV_REMOVE },
-            hwndTarget: if watch { self.hwnd } else { HWND::default() },
-        };
-        unsafe { RegisterRawInputDevices(&[mouse], size_of::<RAWINPUTDEVICE>() as u32) }.is_ok()
+        watch_raw_input(2, watch.then_some(self.hwnd)).is_ok()
     }
 
     pub fn tooltip(&mut self, state: &str) {
@@ -222,8 +219,8 @@ unsafe extern "system" fn window_proc(
 ) -> LRESULT {
     let event = match message {
         WM_INPUT => {
-            if outside_click(hwnd, lparam) {
-                crate::app::tray_event(Event::OutsideClick);
+            if let Some(event) = raw_input_event(hwnd, lparam) {
+                crate::app::tray_event(event);
             }
             return unsafe { DefWindowProcW(hwnd, message, wparam, lparam) };
         }
@@ -277,7 +274,21 @@ pub fn over_icon(hwnd: HWND, point: POINT) -> bool {
     icon_rect(hwnd).is_some_and(|rect| unsafe { PtInRect(&rect, point).as_bool() })
 }
 
-fn outside_click(tray: HWND, lparam: LPARAM) -> bool {
+fn watch_raw_input(usage: u16, target: Option<HWND>) -> windows::core::Result<()> {
+    let device = RAWINPUTDEVICE {
+        usUsagePage: 1, // Generic Desktop
+        usUsage: usage,
+        dwFlags: if target.is_some() {
+            RIDEV_INPUTSINK
+        } else {
+            RIDEV_REMOVE
+        },
+        hwndTarget: target.unwrap_or_default(),
+    };
+    unsafe { RegisterRawInputDevices(&[device], size_of::<RAWINPUTDEVICE>() as u32) }
+}
+
+fn raw_input_event(tray: HWND, lparam: LPARAM) -> Option<Event> {
     let mut input = RAWINPUT::default();
     let mut size = size_of::<RAWINPUT>() as u32;
     let read = unsafe {
@@ -289,12 +300,22 @@ fn outside_click(tray: HWND, lparam: LPARAM) -> bool {
             size_of::<RAWINPUTHEADER>() as u32,
         )
     };
+    if read == u32::MAX || read < size_of::<RAWINPUTHEADER>() as u32 {
+        return None;
+    }
+    match RID_DEVICE_INFO_TYPE(input.header.dwType) {
+        RIM_TYPEMOUSE => {
+            outside_click(tray, unsafe { input.data.mouse }).then_some(Event::OutsideClick)
+        }
+        RIM_TYPEKEYBOARD => double_tap::input(unsafe { input.data.keyboard }).map(Event::DoubleTap),
+        _ => None,
+    }
+}
+
+fn outside_click(tray: HWND, mouse: RAWMOUSE) -> bool {
     let buttons =
         RI_MOUSE_LEFT_BUTTON_DOWN | RI_MOUSE_RIGHT_BUTTON_DOWN | RI_MOUSE_MIDDLE_BUTTON_DOWN;
-    if read != size_of::<RAWINPUT>() as u32
-        || input.header.dwType != RIM_TYPEMOUSE.0
-        || u32::from(unsafe { input.data.mouse.Anonymous.Anonymous.usButtonFlags }) & buttons == 0
-    {
+    if u32::from(unsafe { mouse.Anonymous.Anonymous.usButtonFlags }) & buttons == 0 {
         return false;
     }
     let pos = unsafe { GetMessagePos() };

@@ -78,8 +78,22 @@
                             <TextBlock Text="Example: Ctrl+Alt+F9. Leave blank to disable."
                                        Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <Grid ColumnDefinitions="126,*" ColumnSpacing="8">
+                                <TextBlock Text="Double tap" VerticalAlignment="Center" />
+                                <ComboBox x:Name="DoubleTap" Grid.Column="1" HorizontalAlignment="Stretch"
+                                          AutomationProperties.Name="Double tap"
+                                          ToolTipService.ToolTip="Tap this key twice to save a clip.">
+                                    <ComboBoxItem Content="Right Ctrl" Tag="right_ctrl" />
+                                    <ComboBoxItem Content="Left Ctrl" Tag="left_ctrl" />
+                                    <ComboBoxItem Content="Right Shift" Tag="right_shift" />
+                                    <ComboBoxItem Content="Left Shift" Tag="left_shift" />
+                                    <ComboBoxItem Content="Off" Tag="off" />
+                                </ComboBox>
+                            </Grid>
                         </StackPanel>
                     </Border>
+                    <CheckBox x:Name="Transcribe" Content="Transcribe saved clips locally"
+                              ToolTipService.ToolTip="The first transcript downloads about 740 MB of speech and audio models." />
                     <StackPanel x:Name="General" Spacing="8" Margin="0,4,0,0">
                         <TextBlock Text="General" Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <Border Style="{StaticResource SettingsSectionCardStyle}">

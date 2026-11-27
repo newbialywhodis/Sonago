@@ -48,6 +48,14 @@ jobs:
           $version = $env:GITHUB_REF_NAME.Substring(1)
           $dist = Join-Path $env:RUNNER_TEMP 'sonago-release'
           $cargo = cargo metadata --locked --format-version 1 --filter-platform x86_64-pc-windows-msvc | ConvertFrom-Json
+          # Use the notices from the same native ONNX Runtime build as sherpa-onnx.
+          $ort = 'onnxruntime-win-x64-MT-Release-1.28.2'
+          $archive = Join-Path $env:RUNNER_TEMP "$ort.tar.bz2"
+          Invoke-WebRequest "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/$ort.tar.bz2" -OutFile $archive
+          if ((Get-FileHash $archive).Hash -ne 'cd7f757f7a38ce14238bc9198bee197a9430b42ec3ecadea3408dd2e832eb02e') {
+              throw 'Unexpected ONNX Runtime archive'
+          }
+          tar -xf $archive -C $env:RUNNER_TEMP "$ort/LICENSE" "$ort/ThirdPartyNotices.txt"
 
           function Copy-Notices($source, $destination) {
               $files = Get-ChildItem -LiteralPath $source -File |
@@ -64,7 +72,7 @@ jobs:
               # The WinUI build output includes the app's PRI and XBF resources.
               dotnet build ui/Sonago.csproj -c Release -r $runtime --self-contained `
                   -p:RestoreLockedMode=true "-p:Version=$version" -p:DebugType=none -o "$output/"
-              foreach ($file in 'sonago.exe', 'sonago.ico', 'sonago_core.dll', 'sonago.pri') {
+              foreach ($file in 'sonago.exe', 'sonago.ico', 'sonago_core.dll', 'sonago.pri', 'transcription/sonago-transcribe.exe', 'transcription/sherpa-onnx-c-api.dll', 'transcription/onnxruntime.dll') {
                   if (!(Test-Path -LiteralPath (Join-Path $output $file) -PathType Leaf)) {
                       throw "Missing $file in $runtime build"
                   }
@@ -72,6 +80,7 @@ jobs:
 
               Copy-Item -LiteralPath 'LICENSE' -Destination (Join-Path $output 'LICENSE') -ErrorAction Stop
               $notices = Join-Path $output 'licenses'
+              Copy-Notices (Join-Path $env:RUNNER_TEMP $ort) (Join-Path $notices 'onnxruntime')
               foreach ($package in $cargo.packages | Where-Object source) {
                   $source = Split-Path -Parent $package.manifest_path
                   $destination = Join-Path $notices "$($package.name)-$($package.version)"

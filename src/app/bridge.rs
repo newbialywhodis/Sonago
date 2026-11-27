@@ -18,6 +18,10 @@ use crate::{
 #[serde(tag = "action", rename_all = "snake_case")]
 enum Command {
     Drain,
+    TranscriptResult {
+        clip: std::path::PathBuf,
+        error: Option<String>,
+    },
     Snapshot,
     Settings,
     Apply {
@@ -156,10 +160,31 @@ impl App {
         match command {
             Command::Drain => {
                 let mut actions = Vec::new();
+                let mut clips = Vec::new();
                 while let Ok(event) = self.incoming.try_recv() {
-                    self.on_event(event, &mut actions);
+                    self.on_event(event, &mut actions, &mut clips);
                 }
-                value(actions)
+                value(serde_json::json!({ "actions": actions, "clips": clips }))
+            }
+            Command::TranscriptResult { clip, error } => {
+                if let Some(error) = error {
+                    let message = format!(
+                        "{} · {error}",
+                        clip.file_name().unwrap_or_default().to_string_lossy()
+                    );
+                    self.transcript_issue = Some(message.clone());
+                    self.notify("Could not create transcript", &message, None);
+                } else {
+                    self.transcript_issue = None;
+                    let text = if clip.is_dir() {
+                        clip.join("transcript.txt")
+                    } else {
+                        clip.with_extension("txt")
+                    };
+                    self.notify("Transcript ready", "Click to open", Some(text));
+                }
+                self.refresh();
+                value(())
             }
             Command::Snapshot => value(self.snapshot()),
             Command::Settings => value(self.preferences()),
@@ -319,6 +344,7 @@ impl App {
             });
         let saving = stats.is_some_and(|stats| stats.saving.load(Relaxed));
         let buffered = stats.map_or(Duration::ZERO, |stats| stats.buffered());
+        let warning = warning.or_else(|| self.transcript_issue.clone());
         Snapshot {
             status,
             issue: self
@@ -364,9 +390,9 @@ impl App {
                     })
             })
             .or_else(|| {
-                self.shortcut_issue
-                    .as_ref()
-                    .map(|_| "Hotkey unavailable. Choose another in Settings.".into())
+                self.shortcut_issue.as_ref().map(|_| {
+                    "A global shortcut is unavailable. Check Shortcuts in Settings.".into()
+                })
             })
     }
 }
