@@ -66,15 +66,6 @@ internal static class Native
     [DllImport("dwmapi.dll", ExactSpelling = true)]
     private static extern int DwmSetWindowAttribute(nint window, uint attribute, in int value, uint size);
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct FrameMargins
-    {
-        public int Left, Right, Top, Bottom;
-    }
-
-    [DllImport("dwmapi.dll", ExactSpelling = true)]
-    private static extern int DwmExtendFrameIntoClientArea(nint window, in FrameMargins margins);
-
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern int GetWindowLongW(nint window, int index);
 
@@ -89,15 +80,9 @@ internal static class Native
         const uint cornerPreference = 33;
         const int doNotRound = 1; // WinUI draws the corners of the sliding surface.
         _ = DwmSetWindowAttribute(window, cornerPreference, doNotRound, sizeof(int));
-        const uint nonClientRenderingPolicy = 2;
-        const int disabled = 1;
-        _ = DwmSetWindowAttribute(window, nonClientRenderingPolicy, disabled, sizeof(int));
         const uint borderColor = 34;
         const int noBorder = -2; // DWMWA_COLOR_NONE
         _ = DwmSetWindowAttribute(window, borderColor, noBorder, sizeof(int));
-        // Let WinUI's transparent pixels blend with the desktop across the whole client area.
-        var margins = new FrameMargins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
-        _ = DwmExtendFrameIntoClientArea(window, in margins);
     }
 
     internal static void DisableWindowTransitions(nint window)

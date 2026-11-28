@@ -34,9 +34,11 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.9457" />
     <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.7.0" />
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.7.0" />
+    <PackageReference Include="WinUIEx" Version="2.9.3" />
     <Content Include="$(RustTargetDirectory)\$(RustTarget)\$(RustProfile)\sonago_core.dll"
              Link="sonago_core.dll" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="$(ApplicationIcon)" Link="sonago.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="WinUIEx.LICENSE.txt" Link="licenses\WinUIEx.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\transcription\NOTICE.md" Link="licenses\transcription-models.md" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="$(RustOutput)\sonago-transcribe.exe;$(RustOutput)\sherpa-onnx-c-api.dll;$(RustOutput)\onnxruntime.dll;$(RustOutput)\onnxruntime_providers_shared.dll"
              Link="transcription\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

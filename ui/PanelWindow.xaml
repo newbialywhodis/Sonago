@@ -121,48 +121,43 @@
             <Grid.RenderTransform>
                 <TranslateTransform x:Name="PanelOffset" />
             </Grid.RenderTransform>
-            <SystemBackdropElement CornerRadius="{ThemeResource OverlayCornerRadius}" IsHitTestVisible="False">
-                <SystemBackdropElement.SystemBackdrop>
-                    <DesktopAcrylicBackdrop />
-                </SystemBackdropElement.SystemBackdrop>
-            </SystemBackdropElement>
-            <Border Padding="12,8" BorderThickness="1"
-                    BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" CornerRadius="{ThemeResource OverlayCornerRadius}">
-                <Border.Resources>
+            <Border x:Name="CompactSurface" IsHitTestVisible="False"
+                    Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" BorderThickness="1"
+                    BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" CornerRadius="{ThemeResource OverlayCornerRadius}" />
+            <Grid Padding="13,9" RowDefinitions="Auto,Auto">
+                <Grid.Resources>
                     <x:Double x:Key="QuickActionHeight">32</x:Double>
-                </Border.Resources>
-                <Grid RowDefinitions="Auto,Auto">
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
-                        <SplitButton x:Name="SaveButton" Content="Save" Click="Save" Height="{StaticResource QuickActionHeight}"
-                                     AutomationProperties.Name="Save">
-                            <SplitButton.Flyout>
-                                <MenuFlyout x:Name="SaveMenu" Placement="Top" Opening="OpenSaveMenu" Closed="CloseMenu" />
-                            </SplitButton.Flyout>
-                        </SplitButton>
-                        <ToggleSplitButton x:Name="Microphone" Grid.Column="2" Click="ToggleMicrophone" Height="{StaticResource QuickActionHeight}"
-                                           AutomationProperties.Name="Microphone" ToolTipService.ToolTip="Microphone">
-                            <FontIcon x:Name="MicrophoneIcon" Glyph="&#xEC54;" FontSize="16" />
-                            <ToggleSplitButton.Flyout>
-                                <MenuFlyout x:Name="MicrophoneMenu" Placement="Top" Opening="OpenMicrophoneMenu" Closed="CloseMenu" />
-                            </ToggleSplitButton.Flyout>
-                        </ToggleSplitButton>
-                        <ToggleSplitButton x:Name="SystemAudio" Grid.Column="3" Click="ToggleSystem" Height="{StaticResource QuickActionHeight}"
-                                           AutomationProperties.Name="System audio" ToolTipService.ToolTip="System audio">
-                            <FontIcon x:Name="SystemAudioIcon" Glyph="&#xE74F;" FontSize="16" />
-                            <ToggleSplitButton.Flyout>
-                                <MenuFlyout x:Name="SystemMenu" Placement="Top" Opening="OpenSystemMenu" Closed="CloseMenu" />
-                            </ToggleSplitButton.Flyout>
-                        </ToggleSplitButton>
-                        <ToggleButton x:Name="Gear" Grid.Column="4" Width="36" Height="{StaticResource QuickActionHeight}" Padding="0"
-                                      Click="ToggleSettings" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
-                            <FontIcon Glyph="&#xE713;" FontSize="16" />
-                        </ToggleButton>
-                    </Grid>
-                    <TextBlock x:Name="PanelWarning" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed"
-                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
-                               Style="{StaticResource CaptionTextBlockStyle}" />
+                </Grid.Resources>
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                    <SplitButton x:Name="SaveButton" Content="Save" Click="Save" Height="{StaticResource QuickActionHeight}"
+                                 AutomationProperties.Name="Save">
+                        <SplitButton.Flyout>
+                            <MenuFlyout x:Name="SaveMenu" Placement="Top" Opening="OpenSaveMenu" Closed="CloseMenu" />
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    <ToggleSplitButton x:Name="Microphone" Grid.Column="2" Click="ToggleMicrophone" Height="{StaticResource QuickActionHeight}"
+                                       AutomationProperties.Name="Microphone" ToolTipService.ToolTip="Microphone">
+                        <FontIcon x:Name="MicrophoneIcon" Glyph="&#xEC54;" FontSize="16" />
+                        <ToggleSplitButton.Flyout>
+                            <MenuFlyout x:Name="MicrophoneMenu" Placement="Top" Opening="OpenMicrophoneMenu" Closed="CloseMenu" />
+                        </ToggleSplitButton.Flyout>
+                    </ToggleSplitButton>
+                    <ToggleSplitButton x:Name="SystemAudio" Grid.Column="3" Click="ToggleSystem" Height="{StaticResource QuickActionHeight}"
+                                       AutomationProperties.Name="System audio" ToolTipService.ToolTip="System audio">
+                        <FontIcon x:Name="SystemAudioIcon" Glyph="&#xE74F;" FontSize="16" />
+                        <ToggleSplitButton.Flyout>
+                            <MenuFlyout x:Name="SystemMenu" Placement="Top" Opening="OpenSystemMenu" Closed="CloseMenu" />
+                        </ToggleSplitButton.Flyout>
+                    </ToggleSplitButton>
+                    <ToggleButton x:Name="Gear" Grid.Column="4" Width="36" Height="{StaticResource QuickActionHeight}" Padding="0"
+                                  Click="ToggleSettings" AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
+                        <FontIcon Glyph="&#xE713;" FontSize="16" />
+                    </ToggleButton>
                 </Grid>
-            </Border>
+                <TextBlock x:Name="PanelWarning" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed"
+                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                           Style="{StaticResource CaptionTextBlockStyle}" />
+            </Grid>
         </Grid>
         <Popup x:Name="SettingsPopup" PlacementTarget="{x:Bind QuickPanel}" DesiredPlacement="TopEdgeAlignedRight"
                VerticalOffset="-4" ShouldConstrainToRootBounds="False" Opened="OnSettingsPopupOpened">

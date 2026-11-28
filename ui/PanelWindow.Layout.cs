@@ -102,6 +102,7 @@ public sealed partial class PanelWindow
     {
         offset = pixels;
         PanelOffset.Y = pixels / panelScale;
+        compactBackdrop?.MoveTo(pixels);
         Native.ClipPanel(hwnd, restingBounds.Width, pixels, Math.Min(pixels + restingBounds.Height, travel));
     }
 
