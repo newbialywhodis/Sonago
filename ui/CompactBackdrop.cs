@@ -23,7 +23,7 @@ internal sealed class CompactBackdrop : WinUIEx.TransparentTintBackdrop
     private SystemComposition.SpriteVisual? material;
     private SystemComposition.CompositionRoundedRectangleGeometry? geometry;
     private SystemComposition.CompositionSpriteShape? stroke;
-    private int offset;
+    private Vector3 offset;
 
     internal CompactBackdrop(nint hwnd, Border panel)
     {
@@ -67,11 +67,11 @@ internal sealed class CompactBackdrop : WinUIEx.TransparentTintBackdrop
         base.OnTargetDisconnected(target);
     }
 
-    internal void MoveTo(int pixels)
+    internal void MoveTo(int x, int y)
     {
-        offset = pixels;
+        offset = new Vector3(x, y, 0);
         if (card is not null)
-            card.Offset = new Vector3(0, offset, 0);
+            card.Offset = offset;
     }
 
     private void OnLayoutChanged(object sender, object args) => UpdateGeometry();
@@ -130,7 +130,7 @@ internal sealed class CompactBackdrop : WinUIEx.TransparentTintBackdrop
         desktopTarget = CreateDesktopTarget(compositor);
         card = compositor.CreateContainerVisual();
         card.BorderMode = SystemComposition.CompositionBorderMode.Soft;
-        MoveTo(offset);
+        card.Offset = offset;
 
         // Keep the acrylic and its outline on one curve in the system compositor.
         geometry = compositor.CreateRoundedRectangleGeometry();

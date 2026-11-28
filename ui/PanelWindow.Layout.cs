@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 using Windows.Graphics;
@@ -10,7 +11,9 @@ namespace Sonago;
 public sealed partial class PanelWindow
 {
     private readonly UISettings uiSettings = new();
-    private RectInt32 restingBounds;
+    private Placement? placement;
+    private RectInt32 viewport;
+    private PointInt32 outward;
     private int travel;
     private double panelScale;
     private int offset;
@@ -33,26 +36,56 @@ public sealed partial class PanelWindow
             action = "place",
             width,
             height = (int)Math.Ceiling(contentHeight + frameHeight),
-            centered = setup,
-            newAnchor
+            centered = setup
         });
 
         var bounds = new RectInt32(place.X, place.Y, place.Width, place.Height);
-        int distance = place.WorkBottom - place.Y;
-        bool sameBounds = restingBounds.Equals(bounds) && travel == distance && panelScale == place.Dpi / 96d;
-        if (!newAnchor && sameBounds)
+        bool samePlacement = placement == place;
+        if (!newAnchor && samePlacement)
             return;
-        bool reversing = slideFrom.HasValue && sameBounds;
+        bool reversing = slideFrom.HasValue && samePlacement;
         StopSlide();
-        restingBounds = bounds;
-        travel = distance;
+        placement = place;
         panelScale = place.Dpi / 96d;
-        // The HWND itself ends at the work area. Only its contents travel towards the taskbar.
-        if (!setup)
-            bounds.Height = travel;
-        AppWindow.MoveAndResize(bounds);
         if (setup)
+        {
+            Root.Padding = new Thickness(0);
+            Native.ClearPanelClip(hwnd);
+            AppWindow.MoveAndResize(bounds);
             return;
+        }
+
+        // Extend the HWND to the taskbar, then clip the moving card inside it.
+        var work = place.WorkArea;
+        outward = place.Outward;
+        int gap = place.Edge switch
+        {
+            TaskbarEdge.Left => bounds.X - work.Left,
+            TaskbarEdge.Top => bounds.Y - work.Top,
+            TaskbarEdge.Right => work.Right - bounds.X - bounds.Width,
+            _ => work.Bottom - bounds.Y - bounds.Height
+        };
+        travel = gap + (outward.X == 0 ? bounds.Height : bounds.Width);
+        viewport = new RectInt32(
+            bounds.X - (outward.X < 0 ? gap : 0),
+            bounds.Y - (outward.Y < 0 ? gap : 0),
+            bounds.Width + Math.Abs(outward.X) * gap,
+            bounds.Height + Math.Abs(outward.Y) * gap);
+        Root.Padding = new Thickness(
+            (bounds.X - viewport.X) / panelScale, (bounds.Y - viewport.Y) / panelScale,
+            (viewport.X + viewport.Width - bounds.X - bounds.Width) / panelScale,
+            (viewport.Y + viewport.Height - bounds.Y - bounds.Height) / panelScale);
+        AppWindow.MoveAndResize(viewport);
+
+        SaveMenu.Placement = MicrophoneMenu.Placement = SystemMenu.Placement = place.Edge switch
+        {
+            TaskbarEdge.Left => FlyoutPlacementMode.Right,
+            TaskbarEdge.Top => FlyoutPlacementMode.Bottom,
+            TaskbarEdge.Right => FlyoutPlacementMode.Left,
+            _ => FlyoutPlacementMode.Top
+        };
+        if (SettingsPopup.IsOpen)
+            LayoutSettingsPopup();
         bool animate = slideIn && uiSettings.AnimationsEnabled;
         SetOffset(animate ? (reversing ? offset : travel - 1) : 0);
         if (animate)
@@ -100,10 +133,17 @@ public sealed partial class PanelWindow
 
     private void SetOffset(int pixels)
     {
+        var place = placement!;
         offset = pixels;
-        PanelOffset.Y = pixels / panelScale;
-        compactBackdrop?.MoveTo(pixels);
-        Native.ClipPanel(hwnd, restingBounds.Width, pixels, Math.Min(pixels + restingBounds.Height, travel));
+        int dx = outward.X * pixels;
+        int dy = outward.Y * pixels;
+        PanelOffset.X = dx / panelScale;
+        PanelOffset.Y = dy / panelScale;
+        int x = place.X - viewport.X + dx;
+        int y = place.Y - viewport.Y + dy;
+        compactBackdrop?.MoveTo(x, y);
+        Native.ClipPanel(hwnd, Math.Max(0, x), Math.Max(0, y),
+            Math.Min(viewport.Width, x + place.Width), Math.Min(viewport.Height, y + place.Height));
     }
 
     private void FinishSlide()

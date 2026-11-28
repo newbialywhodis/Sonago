@@ -191,6 +191,12 @@ public sealed partial class PanelWindow : Window
 
     internal void Refresh() => Refresh(resize: true);
 
+    internal void OnDesktopLayoutChanged()
+    {
+        if (shown)
+            Resize();
+    }
+
     private void Refresh(bool resize)
     {
         if (!shown)
@@ -445,12 +451,25 @@ public sealed partial class PanelWindow : Window
             SettingsPopup.Child = SettingsPanel;
         }
 
-        var work = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
-        double scale = Root.XamlRoot.RasterizationScale;
-        SettingsPanel.Width = Math.Clamp(work.Width / scale - 24, 1, SettingsWidth);
-        // Leave room for screen-edge padding at the top of the work area.
-        SettingsPanel.Height = Math.Clamp((AppWindow.Position.Y - work.Y) / scale - 16, 1, SettingsHeight);
+        LayoutSettingsPopup();
         SettingsPopup.IsOpen = true;
+    }
+
+    private void LayoutSettingsPopup()
+    {
+        var place = placement!;
+        var work = place.WorkArea;
+        bool below = place.Edge == TaskbarEdge.Top;
+        SettingsPopup.DesiredPlacement = place.Edge switch
+        {
+            TaskbarEdge.Left => PopupPlacementMode.TopEdgeAlignedLeft,
+            TaskbarEdge.Top => PopupPlacementMode.BottomEdgeAlignedRight,
+            _ => PopupPlacementMode.TopEdgeAlignedRight
+        };
+        SettingsPopup.VerticalOffset = below ? 4 : -4;
+        int availableHeight = below ? work.Bottom - place.Y - place.Height : place.Y - work.Top;
+        SettingsPanel.Width = Math.Clamp((work.Right - work.Left) / panelScale - 24, 1, SettingsWidth);
+        SettingsPanel.Height = Math.Clamp(availableHeight / panelScale - 16, 1, SettingsHeight);
     }
 
     private void OnSettingsPopupOpened(object sender, object args)

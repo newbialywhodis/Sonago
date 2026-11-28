@@ -48,7 +48,6 @@ enum Command {
         width: i32,
         height: i32,
         centered: bool,
-        new_anchor: bool,
     },
     PlaceTrayMenu {
         width: i32,
@@ -232,13 +231,12 @@ impl App {
                 width,
                 height,
                 centered,
-                new_anchor,
             } => {
-                if new_anchor || self.anchor.is_none() {
-                    self.anchor = Some(tray::anchor(self.tray.rect()));
-                }
+                let anchor = *self
+                    .anchor
+                    .get_or_insert_with(|| tray::anchor(self.tray.rect()));
                 value(tray::placement(
-                    self.anchor.unwrap(),
+                    anchor,
                     width,
                     height,
                     if centered {
@@ -249,7 +247,7 @@ impl App {
                 )?)
             }
             Command::PlaceTrayMenu { width, height } => value(tray::placement(
-                self.menu_anchor
+                self.anchor
                     .unwrap_or_else(|| tray::anchor(self.tray.rect())),
                 width,
                 height,

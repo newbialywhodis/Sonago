@@ -19,8 +19,8 @@ public sealed partial class TrayMenuWindow : Window
     private readonly Action requestExit;
     private readonly UISettings uiSettings = new();
     private RectInt32 restingBounds;
-    private int slideDistance;
-    private (int From, int To)? slide;
+    private PointInt32 slideOffset;
+    private (PointInt32 From, PointInt32 To)? slide;
     private long slideStart;
     private Action? afterDismiss;
     private bool shown;
@@ -71,28 +71,34 @@ public sealed partial class TrayMenuWindow : Window
             height = (int)Math.Ceiling(content.Height + Math.Max(0, frame.Height - client.Height) / scale)
         });
         var bounds = new RectInt32(place.X, place.Y, place.Width, place.Height);
-        if (shown && restingBounds.Equals(bounds))
+        var outward = place.Outward;
+        int distance = (int)Math.Round(SlideDistanceDip * place.Dpi / 96d);
+        var nextOffset = new PointInt32(outward.X * distance, outward.Y * distance);
+        bool samePlacement = restingBounds.Equals(bounds) && slideOffset.Equals(nextOffset);
+        if (shown && samePlacement)
             return;
 
-        slideDistance = (int)Math.Round(SlideDistanceDip * place.Dpi / 96d);
-        int initialY = bounds.Y;
+        slideOffset = nextOffset;
+        var rest = new PointInt32(bounds.X, bounds.Y);
+        var initial = rest;
         if (uiSettings.AnimationsEnabled)
         {
-            if (slide is not null && restingBounds.Equals(bounds))
-                initialY = AppWindow.Position.Y;
+            if (slide is not null && samePlacement)
+                initial = AppWindow.Position;
             else if (!shown)
-                initialY += slideDistance;
+                initial = new PointInt32(rest.X + slideOffset.X, rest.Y + slideOffset.Y);
         }
 
         StopSlide();
         restingBounds = bounds;
-        bounds.Y = initialY;
+        bounds.X = initial.X;
+        bounds.Y = initial.Y;
         AppWindow.MoveAndResize(bounds);
         shown = true;
         Root.IsHitTestVisible = true;
         Activate();
-        if (shown && initialY != restingBounds.Y)
-            StartSlide(initialY, restingBounds.Y);
+        if (shown && !initial.Equals(rest))
+            StartSlide(initial, rest);
         if (shown && Root.IsLoaded)
             OpenButton.Focus(FocusState.Programmatic);
     }
@@ -108,9 +114,9 @@ public sealed partial class TrayMenuWindow : Window
         Root.IsHitTestVisible = false;
         afterDismiss = completion;
         StopSlide();
-        int from = AppWindow.Position.Y;
-        int to = restingBounds.Y + slideDistance;
-        if (uiSettings.AnimationsEnabled && from < to)
+        var from = AppWindow.Position;
+        var to = new PointInt32(restingBounds.X + slideOffset.X, restingBounds.Y + slideOffset.Y);
+        if (uiSettings.AnimationsEnabled && !from.Equals(to))
         {
             StartSlide(from, to);
         }
@@ -128,7 +134,7 @@ public sealed partial class TrayMenuWindow : Window
         completion?.Invoke();
     }
 
-    private void StartSlide(int from, int to)
+    private void StartSlide(PointInt32 from, PointInt32 to)
     {
         slide = (from, to);
         slideStart = 0;
@@ -156,9 +162,11 @@ public sealed partial class TrayMenuWindow : Window
 
         double remaining = 1 - progress;
         double eased = shown ? 1 - remaining * remaining * remaining : progress * progress;
-        int y = current.From + (int)Math.Round((current.To - current.From) * eased);
-        if (AppWindow.Position.Y != y)
-            AppWindow.Move(new PointInt32(restingBounds.X, y));
+        var next = new PointInt32(
+            current.From.X + (int)Math.Round((current.To.X - current.From.X) * eased),
+            current.From.Y + (int)Math.Round((current.To.Y - current.From.Y) * eased));
+        if (!AppWindow.Position.Equals(next))
+            AppWindow.Move(next);
     }
 
     private void StopSlide()

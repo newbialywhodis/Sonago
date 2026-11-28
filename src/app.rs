@@ -75,7 +75,6 @@ fn start(wake: Wake) -> Result<Option<bool>> {
         events: events.clone(),
         incoming,
         anchor: None,
-        menu_anchor: None,
         capture_issue: [None, None],
         engine_issue: None,
         shortcut_issue: None,
@@ -169,7 +168,6 @@ struct App {
     events: EventSender,
     incoming: mpsc::Receiver<AppEvent>,
     anchor: Option<RECT>,
-    menu_anchor: Option<RECT>,
     capture_issue: [Option<String>; 2],
     engine_issue: Option<String>,
     shortcut_issue: Option<String>,
@@ -345,7 +343,8 @@ impl App {
     ) {
         match event {
             AppEvent::Tray(Event::OutsideClick) => actions.push("outside_click"),
-            AppEvent::Tray(Event::Toggle { activate }) => {
+            AppEvent::Tray(Event::Toggle { activate, anchor }) => {
+                self.anchor = Some(anchor);
                 actions.push(if activate {
                     "toggle_activate"
                 } else {
@@ -353,7 +352,7 @@ impl App {
                 });
             }
             AppEvent::Tray(Event::ContextMenu(rect)) => {
-                self.menu_anchor = Some(rect);
+                self.anchor = Some(rect);
                 actions.push("context_menu");
             }
             AppEvent::Tray(Event::Quit) => match self.can_quit() {
@@ -386,6 +385,12 @@ impl App {
                 if let Err(err) = self.tray.restore() {
                     self.show_error(&err.to_string());
                 }
+                self.anchor = None;
+                actions.push("layout_changed");
+            }
+            AppEvent::Tray(Event::LayoutChanged) => {
+                self.anchor = None;
+                actions.push("layout_changed");
             }
             AppEvent::Capture(CaptureEvent::Ready(track)) => self.capture_issue[track] = None,
             AppEvent::Capture(CaptureEvent::Unavailable(track, detail)) => {

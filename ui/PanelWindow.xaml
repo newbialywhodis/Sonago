@@ -144,21 +144,21 @@
                     <SplitButton x:Name="SaveButton" Content="Save" Click="Save" Height="{StaticResource QuickActionHeight}"
                                  AutomationProperties.Name="Save">
                         <SplitButton.Flyout>
-                            <MenuFlyout x:Name="SaveMenu" Placement="Top" Opening="OpenSaveMenu" Closed="CloseMenu" />
+                            <MenuFlyout x:Name="SaveMenu" Opening="OpenSaveMenu" Closed="CloseMenu" />
                         </SplitButton.Flyout>
                     </SplitButton>
                     <ToggleSplitButton x:Name="Microphone" Grid.Column="2" Click="ToggleMicrophone" Height="{StaticResource QuickActionHeight}"
                                        AutomationProperties.Name="Microphone" ToolTipService.ToolTip="Microphone">
                         <FontIcon x:Name="MicrophoneIcon" Glyph="&#xEC54;" FontSize="16" />
                         <ToggleSplitButton.Flyout>
-                            <MenuFlyout x:Name="MicrophoneMenu" Placement="Top" Opening="OpenMicrophoneMenu" Closed="CloseMenu" />
+                            <MenuFlyout x:Name="MicrophoneMenu" Opening="OpenMicrophoneMenu" Closed="CloseMenu" />
                         </ToggleSplitButton.Flyout>
                     </ToggleSplitButton>
                     <ToggleSplitButton x:Name="SystemAudio" Grid.Column="3" Click="ToggleSystem" Height="{StaticResource QuickActionHeight}"
                                        AutomationProperties.Name="System audio" ToolTipService.ToolTip="System audio">
                         <FontIcon x:Name="SystemAudioIcon" Glyph="&#xE74F;" FontSize="16" />
                         <ToggleSplitButton.Flyout>
-                            <MenuFlyout x:Name="SystemMenu" Placement="Top" Opening="OpenSystemMenu" Closed="CloseMenu" />
+                            <MenuFlyout x:Name="SystemMenu" Opening="OpenSystemMenu" Closed="CloseMenu" />
                         </ToggleSplitButton.Flyout>
                     </ToggleSplitButton>
                     <ToggleButton x:Name="Gear" Grid.Column="4" Width="36" Height="{StaticResource QuickActionHeight}" Padding="0"
@@ -171,8 +171,8 @@
                            Style="{StaticResource CaptionTextBlockStyle}" />
             </Grid>
         </Grid>
-        <Popup x:Name="SettingsPopup" PlacementTarget="{x:Bind QuickPanel}" DesiredPlacement="TopEdgeAlignedRight"
-               VerticalOffset="-4" ShouldConstrainToRootBounds="False" Opened="OnSettingsPopupOpened">
+        <Popup x:Name="SettingsPopup" PlacementTarget="{x:Bind QuickPanel}"
+               ShouldConstrainToRootBounds="False" Opened="OnSettingsPopupOpened">
             <Popup.ChildTransitions>
                 <PopupThemeTransition FromHorizontalOffset="0" FromVerticalOffset="8" />
             </Popup.ChildTransitions>

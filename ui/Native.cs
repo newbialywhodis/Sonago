@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Windows.Graphics;
 
 namespace Sonago;
 
@@ -41,15 +43,17 @@ internal static class Native
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern int SetWindowRgn(nint window, nint region, bool redraw);
 
-    internal static void ClipPanel(nint window, int width, int top, int bottom)
+    internal static void ClipPanel(nint window, int left, int top, int right, int bottom)
     {
-        var region = CreateRectRgn(0, top, width, bottom);
+        var region = CreateRectRgn(left, top, right, bottom);
         if (region == 0)
             return;
         // On success Windows takes ownership of the region.
         if (SetWindowRgn(window, region, true) == 0)
             DeleteObject(region);
     }
+
+    internal static void ClearPanelClip(nint window) => SetWindowRgn(window, 0, true);
 
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern nint GetForegroundWindow();
@@ -132,4 +136,17 @@ internal sealed record Settings(Source[] Sources, int Retention, int Minutes, st
 internal sealed record DeviceChoice(string Label, string? Endpoint, bool Selected);
 internal sealed record Preferences(Settings Settings, DeviceChoice[][] Devices, string[] SaveSoundChoices, string? Issue);
 internal sealed record SaveLength(int Minutes, string Label, bool IsDefault);
-internal sealed record Placement(int X, int Y, int Width, int Height, int Dpi, int WorkBottom);
+[JsonConverter(typeof(JsonStringEnumConverter<TaskbarEdge>))]
+internal enum TaskbarEdge { Left, Top, Right, Bottom }
+
+internal sealed record WorkArea(int Left, int Top, int Right, int Bottom);
+internal sealed record Placement(int X, int Y, int Width, int Height, int Dpi, TaskbarEdge Edge, WorkArea WorkArea)
+{
+    internal PointInt32 Outward => Edge switch
+    {
+        TaskbarEdge.Left => new(-1, 0),
+        TaskbarEdge.Top => new(0, -1),
+        TaskbarEdge.Right => new(1, 0),
+        _ => new(0, 1)
+    };
+}

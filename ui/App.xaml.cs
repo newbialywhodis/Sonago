@@ -95,6 +95,10 @@ public sealed partial class App : Application
                         () => Native.Run(new { action = "quit" }));
                     trayMenu.ShowAtTray();
                     break;
+                case "layout_changed":
+                    trayMenu?.Dismiss();
+                    panel?.OnDesktopLayoutChanged();
+                    break;
                 case "quit":
                     Shutdown();
                     return;

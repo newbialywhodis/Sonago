@@ -24,7 +24,7 @@ const TRAY_ICON_ID: u32 = 1;
 const NIN_KEYSELECT: u32 = NIN_SELECT | 1;
 
 pub enum Event {
-    Toggle { activate: bool },
+    Toggle { activate: bool, anchor: RECT },
     OutsideClick,
     ContextMenu(RECT),
     Save(i32),
@@ -32,6 +32,7 @@ pub enum Event {
     Open,
     Resume,
     Restore,
+    LayoutChanged,
     Quit,
 }
 
@@ -229,6 +230,7 @@ unsafe extern "system" fn window_proc(
         TRAY_MESSAGE if matches!(lparam.0 as u32 & 0xffff, NIN_KEYSELECT | WM_LBUTTONUP) => {
             Event::Toggle {
                 activate: (lparam.0 as u32 & 0xffff) == NIN_KEYSELECT,
+                anchor: anchor(icon_rect(hwnd)),
             }
         }
         TRAY_MESSAGE if (lparam.0 as u32 & 0xffff) == WM_CONTEXTMENU => {
@@ -236,13 +238,15 @@ unsafe extern "system" fn window_proc(
             Event::ContextMenu(anchor(icon_rect(hwnd)))
         }
         WM_CLOSE => Event::Quit,
+        WM_DISPLAYCHANGE => Event::LayoutChanged,
+        WM_SETTINGCHANGE if wparam.0 == SPI_SETWORKAREA.0 as usize => Event::LayoutChanged,
         WM_POWERBROADCAST if wparam.0 == PBT_APMRESUMEAUTOMATIC as usize => Event::Resume,
         id if id != 0 && id == TASKBAR_CREATED.get() => Event::Restore,
         _ => return unsafe { DefWindowProcW(hwnd, message, wparam, lparam) },
     };
     if matches!(
         event,
-        Event::Toggle { activate: true } | Event::ContextMenu(_)
+        Event::Toggle { activate: true, .. } | Event::ContextMenu(_)
     ) {
         // Claim Explorer's activation without deactivating a panel we already own.
         let mut foreground_process = 0;
