@@ -31,7 +31,7 @@ impl Worker {
         }
         if self.loaded.is_none() {
             let (root, slot) = models::prepare()?;
-            self.loaded = Some((analysis::Analysis::new(&root)?, slot));
+            self.loaded = Some((analysis::Analysis::new(root), slot));
         }
         let analysis = &mut self.loaded.as_mut().unwrap().0;
         analysis.begin_clip();

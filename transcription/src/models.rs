@@ -4,8 +4,149 @@ use std::{
     process::Command,
 };
 
-use super::Result;
+use super::{RATE, Result};
 use sha2::{Digest, Sha256};
+use sherpa_onnx::{
+    AudioTagging, AudioTaggingConfig, AudioTaggingModelConfig, OfflineModelConfig,
+    OfflineRecognizer, OfflineRecognizerConfig, OfflineSpeakerDiarization,
+    OfflineSpeakerDiarizationConfig, OfflineSpeakerSegmentationModelConfig,
+    OfflineSpeakerSegmentationPyannoteModelConfig, OfflineTransducerModelConfig,
+    OfflineZipformerAudioTaggingModelConfig, SileroVadModelConfig, SpeakerEmbeddingExtractor,
+    SpeakerEmbeddingExtractorConfig, VadModelConfig, VoiceActivityDetector,
+};
+
+/// Model sessions are opened on first use and reused for the life of the worker.
+pub struct Sessions {
+    root: PathBuf,
+    asr: Option<OfflineRecognizer>,
+    vad: Option<VoiceActivityDetector>,
+    diar: Option<OfflineSpeakerDiarization>,
+    voices: Option<SpeakerEmbeddingExtractor>,
+    tag: Option<AudioTagging>,
+}
+
+impl Sessions {
+    pub fn new(root: PathBuf) -> Self {
+        Self {
+            root,
+            asr: None,
+            vad: None,
+            diar: None,
+            voices: None,
+            tag: None,
+        }
+    }
+
+    pub fn asr(&mut self) -> Result<&OfflineRecognizer> {
+        let root = &self.root;
+        get_or_load(&mut self.asr, "Could not load Parakeet", || {
+            OfflineRecognizer::create(&OfflineRecognizerConfig {
+                model_config: OfflineModelConfig {
+                    transducer: OfflineTransducerModelConfig {
+                        encoder: model_path(root, "encoder.onnx"),
+                        decoder: model_path(root, "decoder.onnx"),
+                        joiner: model_path(root, "joiner.onnx"),
+                    },
+                    tokens: model_path(root, "tokens.txt"),
+                    model_type: Some("nemo_transducer".into()),
+                    num_threads: 2,
+                    ..Default::default()
+                },
+                decoding_method: Some("greedy_search".into()),
+                ..Default::default()
+            })
+        })
+    }
+
+    pub fn vad(&mut self) -> Result<&VoiceActivityDetector> {
+        let root = &self.root;
+        get_or_load(&mut self.vad, "Could not load speech detector", || {
+            VoiceActivityDetector::create(
+                &VadModelConfig {
+                    silero_vad: SileroVadModelConfig {
+                        model: model_path(root, "vad.onnx"),
+                        threshold: 0.5,
+                        min_silence_duration: 0.45,
+                        min_speech_duration: 0.2,
+                        window_size: 512,
+                        max_speech_duration: 22.0,
+                    },
+                    sample_rate: RATE as i32,
+                    num_threads: 1,
+                    ..Default::default()
+                },
+                30.,
+            )
+        })
+    }
+
+    pub fn diar(&mut self) -> Result<&OfflineSpeakerDiarization> {
+        let root = &self.root;
+        get_or_load(&mut self.diar, "Could not load speaker diarization", || {
+            OfflineSpeakerDiarization::create(&OfflineSpeakerDiarizationConfig {
+                segmentation: OfflineSpeakerSegmentationModelConfig {
+                    pyannote: OfflineSpeakerSegmentationPyannoteModelConfig {
+                        model: model_path(root, "segmentation.onnx"),
+                        ..Default::default()
+                    },
+                    num_threads: 2,
+                    ..Default::default()
+                },
+                embedding: embedding_config(root),
+                ..Default::default()
+            })
+        })
+    }
+
+    pub fn voices(&mut self) -> Result<&SpeakerEmbeddingExtractor> {
+        let root = &self.root;
+        get_or_load(
+            &mut self.voices,
+            "Could not load speaker embeddings",
+            || SpeakerEmbeddingExtractor::create(&embedding_config(root)),
+        )
+    }
+
+    pub fn tag(&mut self) -> Result<&AudioTagging> {
+        let root = &self.root;
+        get_or_load(&mut self.tag, "Could not load audio tagging", || {
+            AudioTagging::create(&AudioTaggingConfig {
+                model: AudioTaggingModelConfig {
+                    zipformer: OfflineZipformerAudioTaggingModelConfig {
+                        model: model_path(root, "music.onnx"),
+                    },
+                    num_threads: 2,
+                    ..Default::default()
+                },
+                labels: model_path(root, "labels.csv"),
+                top_k: 8,
+            })
+        })
+    }
+}
+
+fn get_or_load<'a, T>(
+    session: &'a mut Option<T>,
+    error: &'static str,
+    create: impl FnOnce() -> Option<T>,
+) -> Result<&'a T> {
+    Ok(match session {
+        Some(model) => model,
+        None => session.insert(create().ok_or(error)?),
+    })
+}
+
+fn model_path(root: &Path, name: &str) -> Option<String> {
+    Some(root.join(name).to_string_lossy().into_owned())
+}
+
+fn embedding_config(root: &Path) -> SpeakerEmbeddingExtractorConfig {
+    SpeakerEmbeddingExtractorConfig {
+        model: model_path(root, "embedding.onnx"),
+        num_threads: 2,
+        ..Default::default()
+    }
+}
 
 const ASR: &str = "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8";
 const TAG: &str = "https://huggingface.co/k2-fsa/sherpa-onnx-zipformer-small-audio-tagging-2024-04-15/resolve/c24f9d0fdf7d0b8c0c4f9733aa0cac51fda10c95";
