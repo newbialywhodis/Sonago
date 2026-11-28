@@ -482,6 +482,8 @@ public sealed partial class PanelWindow : Window
         Format.SelectedIndex = settings.Format == "ogg_opus" ? 1 : 0;
         Autostart.IsChecked = settings.Autostart;
         Notifications.IsChecked = settings.Notifications;
+        SaveSoundChoice.ItemsSource = draft.SaveSoundChoices;
+        SaveSoundChoice.SelectedIndex = settings.SaveSound;
         Transcribe.IsChecked = settings.Transcribe;
         if (setup)
             SettingsPanel.Visibility = Visibility.Visible;
@@ -533,6 +535,22 @@ public sealed partial class PanelWindow : Window
         Refresh();
     }
 
+    private void OnSaveSoundChanged(object sender, SelectionChangedEventArgs args) =>
+        PlaySaveSound.IsEnabled = SaveSoundChoice.SelectedIndex > 0;
+
+    private void PreviewSaveSound(object sender, RoutedEventArgs args)
+    {
+        try
+        {
+            Native.Run(new { action = "preview_save_sound", sound = SaveSoundChoice.SelectedIndex });
+        }
+        catch (InvalidOperationException error)
+        {
+            settingsError = error.Message;
+            Refresh();
+        }
+    }
+
     private void Apply(object sender, RoutedEventArgs args)
     {
         if (!shown || draft is null)
@@ -557,6 +575,7 @@ public sealed partial class PanelWindow : Window
                 DoubleTap = (DoubleTap.SelectedItem as ComboBoxItem)?.Tag as string ?? original.DoubleTap,
                 Autostart = Autostart.IsChecked == true,
                 Notifications = Notifications.IsChecked == true,
+                SaveSound = SaveSoundChoice.SelectedIndex >= 0 ? SaveSoundChoice.SelectedIndex : original.SaveSound,
                 Transcribe = Transcribe.IsChecked == true
             };
             Native.Run(new { action = "apply", settings });

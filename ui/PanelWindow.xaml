@@ -97,9 +97,21 @@
                     <StackPanel x:Name="General" Spacing="8" Margin="0,4,0,0">
                         <TextBlock Text="General" Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <Border Style="{StaticResource SettingsSectionCardStyle}">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <CheckBox x:Name="Autostart" Content="Start with Windows" />
-                                <CheckBox x:Name="Notifications" Content="Notifications" />
+                            <StackPanel Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <CheckBox x:Name="Autostart" Content="Start with Windows" />
+                                    <CheckBox x:Name="Notifications" Content="Notifications" />
+                                </StackPanel>
+                                <Grid ColumnDefinitions="126,*,Auto" ColumnSpacing="8">
+                                    <TextBlock Text="Save sound" VerticalAlignment="Center" />
+                                    <ComboBox x:Name="SaveSoundChoice" Grid.Column="1" HorizontalAlignment="Stretch"
+                                              AutomationProperties.Name="Save sound" SelectionChanged="OnSaveSoundChanged" />
+                                    <Button x:Name="PlaySaveSound" Grid.Column="2" Width="36" Height="32" Padding="0"
+                                            IsEnabled="False" Click="PreviewSaveSound"
+                                            AutomationProperties.Name="Preview save sound" ToolTipService.ToolTip="Preview save sound">
+                                        <SymbolIcon Symbol="Play" />
+                                    </Button>
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </StackPanel>

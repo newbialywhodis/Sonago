@@ -1,4 +1,5 @@
 mod bridge;
+mod save_sound;
 mod settings;
 
 use std::{
@@ -412,6 +413,7 @@ impl App {
             }
             AppEvent::Engine(Notice::Saved(path)) => {
                 self.export_issue = None;
+                let _ = save_sound::play(self.settings.save_sound);
                 let file = path.file_name().unwrap_or_default().to_string_lossy();
                 let message = if self.pending_save.take() == Some(true) {
                     clips.push(path.clone());

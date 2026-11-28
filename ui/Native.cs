@@ -128,8 +128,8 @@ internal sealed record Snapshot(string? Warning, string? Issue, bool SystemOn, b
 internal sealed record Source(bool Enabled, string? Endpoint);
 internal sealed record Events(string[] Actions, string[] Clips);
 internal sealed record Settings(Source[] Sources, int Retention, int Minutes, string Output,
-    string Format, string Hotkey, string DoubleTap, bool Autostart, bool Notifications, bool Transcribe);
+    string Format, string Hotkey, string DoubleTap, bool Autostart, bool Notifications, int SaveSound, bool Transcribe);
 internal sealed record DeviceChoice(string Label, string? Endpoint, bool Selected);
-internal sealed record Preferences(Settings Settings, DeviceChoice[][] Devices, string? Issue);
+internal sealed record Preferences(Settings Settings, DeviceChoice[][] Devices, string[] SaveSoundChoices, string? Issue);
 internal sealed record SaveLength(int Minutes, string Label, bool IsDefault);
 internal sealed record Placement(int X, int Y, int Width, int Height, int Dpi, int WorkBottom);

@@ -7,7 +7,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{App, AppEvent, Settings, Wake, start, stop, with_app};
+use super::{App, AppEvent, Settings, Wake, save_sound, start, stop, with_app};
 use crate::{
     Result,
     tray::{self, Event, PlacementTarget},
@@ -26,6 +26,9 @@ enum Command {
     Settings,
     Apply {
         settings: Settings,
+    },
+    PreviewSaveSound {
+        sound: u8,
     },
     Devices {
         track: usize,
@@ -85,6 +88,7 @@ struct DeviceChoice {
 struct Preferences {
     settings: Settings,
     devices: [Vec<DeviceChoice>; 2],
+    save_sound_choices: Vec<String>,
     issue: Option<String>,
 }
 
@@ -192,6 +196,10 @@ impl App {
                 self.apply(settings)?;
                 value(())
             }
+            Command::PreviewSaveSound { sound } => {
+                save_sound::play(sound)?;
+                value(())
+            }
             Command::Devices { track } => {
                 let selected = self.source(track)?.endpoint.as_deref();
                 let devices = endpoints()?;
@@ -291,6 +299,7 @@ impl App {
                     self.settings.sources[track].endpoint.as_deref(),
                 )
             }),
+            save_sound_choices: save_sound::choices(),
             issue,
         }
     }

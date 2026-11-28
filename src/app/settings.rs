@@ -12,6 +12,8 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+use super::save_sound;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Settings {
     pub sources: [Source; 2],
@@ -24,6 +26,8 @@ pub(super) struct Settings {
     pub double_tap: DoubleTapKey,
     pub autostart: bool,
     pub notifications: bool,
+    #[serde(default)]
+    pub save_sound: u8,
     #[serde(default = "transcribe_by_default")]
     pub transcribe: bool,
 }
@@ -91,6 +95,7 @@ impl Settings {
                     double_tap: DoubleTapKey::default(),
                     autostart: false,
                     notifications: true,
+                    save_sound: 0,
                     transcribe: true,
                 },
                 true,
@@ -122,6 +127,7 @@ impl Settings {
     }
 
     pub fn validate(&self) -> Result<()> {
+        save_sound::validate(self.save_sound)?;
         if !(1..=MAX_HISTORY_MINUTES).contains(&self.retention) {
             return Err("History must be between 1 and 720 minutes.".into());
         }
@@ -153,7 +159,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn double_tap_defaults_to_right_ctrl_for_existing_settings() -> Result<()> {
+    fn existing_settings_default_to_right_ctrl_and_no_save_sound() -> Result<()> {
         let mut stored = serde_json::json!({
             "sources": [
                 {"enabled": true, "endpoint": null},
@@ -169,11 +175,17 @@ mod tests {
         });
         let settings: Settings = serde_json::from_value(stored.clone())?;
         assert_eq!(settings.double_tap, DoubleTapKey::RightCtrl);
+        assert_eq!(settings.save_sound, 0);
 
         stored["double_tap"] = "off".into();
+        stored["save_sound"] = 8.into();
         let settings: Settings = serde_json::from_value(stored)?;
         assert_eq!(settings.double_tap, DoubleTapKey::Off);
-        assert_eq!(serde_json::to_value(settings)?["double_tap"], "off");
+        assert_eq!(settings.save_sound, 8);
+        settings.validate()?;
+        let stored = serde_json::to_value(settings)?;
+        assert_eq!(stored["double_tap"], "off");
+        assert_eq!(stored["save_sound"], 8);
         Ok(())
     }
 }
